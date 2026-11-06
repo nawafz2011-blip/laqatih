@@ -174,6 +174,21 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .cto{color:var(--mute);font-size:10px}.cb{padding:2px 6px;font-size:12px}.cb.act{background:var(--accent);border-color:var(--accent);color:#fff}.cb.del{color:#ff5c8a}
 .cl textarea{min-height:38px;font-size:13px;padding:6px 8px}
 .qopt{display:grid;gap:8px;margin-bottom:14px;text-align:right}.qopt button{justify-content:space-between;padding:10px 12px;flex-wrap:wrap}.qopt button.on{border-color:var(--accent);background:var(--accent-soft)}.qopt small{color:var(--mute)}.qopt button:disabled{opacity:.45}
+ #splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#2a1d63,#0e0f13 70%);transition:opacity .45s}
+#splash.out{opacity:0;pointer-events:none}
+.spl{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff}
+.spl i{width:84px;height:84px;border-radius:24px;background:linear-gradient(135deg,#7c5cff,#ff5c8a);display:grid;place-items:center;font-style:normal;font-size:40px;box-shadow:0 0 0 0 #7c5cff88;animation:splI 1.1s cubic-bezier(.34,1.56,.64,1) both,splG 1.6s .6s ease-out infinite}
+.spl b{font-size:34px;font-weight:800;animation:splT .7s .35s cubic-bezier(.2,.8,.2,1) both}
+.spl small{color:#b9b3d9;animation:splT .7s .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes splI{0%{transform:scale(.2) rotate(-200deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes splG{0%{box-shadow:0 0 0 0 #7c5cff99}100%{box-shadow:0 0 0 28px #7c5cff00}}
+@keyframes splT{0%{transform:translateY(14px);opacity:0}100%{transform:none;opacity:1}}
+#homeBody.anim>*{animation:hIn .45s cubic-bezier(.2,.8,.2,1) both}
+#homeBody.anim>*:nth-child(2){animation-delay:.06s}#homeBody.anim>*:nth-child(3){animation-delay:.12s}#homeBody.anim>*:nth-child(4){animation-delay:.18s}#homeBody.anim>*:nth-child(5){animation-delay:.24s}#homeBody.anim>*:nth-child(n+6){animation-delay:.3s}
+@keyframes hIn{0%{transform:translateY(12px);opacity:0}100%{transform:none;opacity:1}}
+.hero .nb{transition:transform .15s}.hero .nb:active{transform:scale(.96)}
+.tg button i{transition:transform .2s}.tg button:hover i{transform:translateY(-3px)}
+@media (prefers-reduced-motion:reduce){#splash,.spl *,#homeBody.anim>*{animation:none!important;transition:none!important}}
 .ckl{display:flex;gap:8px;align-items:flex-start;text-align:right;margin-bottom:8px;line-height:1.6}
 .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .presets button{justify-content:center;font-size:15px;font-weight:700;padding:8px 0;background-color:var(--panel2)}
@@ -308,7 +323,9 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
     </div>
   </section>
 </div>
+<input type="file" id="newFile" multiple accept="video/*,image/*,audio/*" hidden>
 <input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" hidden>
+<div id="splash" aria-hidden="true"><div class="spl"><i>✦</i><b>لقطة</b><small>محرر الفيديو العربي</small></div></div>
 <div class="scrim" id="scrim"></div>
 <div id="home" hidden><div class="hwrap"><div class="htop"><div class="logo"><i>✦</i> لقطة</div><span class="sp"></span><button id="hTour2" data-htab="settings" aria-label="الإعدادات">⚙</button></div><div id="homeBody"></div></div>
   <nav class="hnav"><button data-htab="home" class="on"><b>⌂</b>الرئيسية</button><button data-htab="projects"><b>▤</b>المشاريع</button><button data-htab="settings"><b>⚙</b>الإعدادات</button></nav></div>
@@ -386,9 +403,8 @@ async function makeMedia(f,extra={}){
 }
 async function addFiles(files){
   let n=0;
-  let first=null;for(const f of files){const m=await makeMedia(f);if(m){media.set(m.id,m);persistMedia(m);n++;first=first||m}}
-  libTab='files';renderLib();if(n)toast('تمت إضافة '+n+' ملف');
-  if(pendingTool&&first)runPendingTool(first);
+  const out=[];for(const f of files){const m=await makeMedia(f);if(m){media.set(m.id,m);persistMedia(m);n++;out.push(m)}}
+  libTab='files';renderLib();if(n)toast('تمت إضافة '+n+' ملف');return out;
 }
 /* ---------- sound library (synthesized in the browser, no external files) ---------- */
 const SOUNDS=[
@@ -1273,6 +1289,8 @@ function hideLoading(){hideOv()}
 let homeTab='home',homeQ='',homeF='all',pendingTool=null,menuFor=null;
 const TOOLS=[['cap','📝','كتابة تلقائية',1],['sil','🔇','حذف الصمت'],['voice','🎤','مغيّر الصوت'],['ext','♫','استخراج الصوت'],['ovl','⧉','طبقات'],['fx','🌀','تأثيرات'],['kf','◆','كي فريم'],['tour','🎓','الشرح']];
 const ago=t=>{const d=(Date.now()-t)/864e5;if(d<1&&new Date(t).getDate()===new Date().getDate())return 'اليوم';if(d<2)return 'أمس';return new Date(t).toLocaleDateString('ar-SA-u-nu-latn',{day:'numeric',month:'long'})};
+const splashT0=performance.now();
+function endSplash(){const sp=$('#splash');if(!sp)return;setTimeout(()=>{sp.classList.add('out');setTimeout(()=>sp.remove(),500)},Math.max(0,1300-(performance.now()-splashT0)))}
 function showHome(){pause();saveProject();homeTab='home';menuFor=null;renderHome();$('#home').hidden=false}
 function hideHome(){$('#home').hidden=true}
 function pcard(p){return `<button class="rc" data-open="${p.id}"><i style="${p.thumb?`background-image:url('${p.thumb}')`:''}" class="r-${p.ratio.replace(':','-')}"><em>${fmt(p.dur||0,false)}</em></i><small>${esc(p.name)}</small></button>`}
@@ -1281,10 +1299,10 @@ function prow(p){const on=menuFor===p.id;return `<div class="pr" data-pid="${p.i
   <button class="dots" data-menu="${p.id}" aria-label="خيارات">⋯</button>
   ${on?`<div class="pmenu"><button data-open="${p.id}">✏️ تعديل</button><button data-rn="${p.id}">✎ إعادة تسمية</button><button data-dup="${p.id}">⧉ نسخة ثانية</button><button data-exp="${p.id}">⬇ تصدير</button><button class="del" data-del="${p.id}">🗑 حذف</button></div>`:''}</div>`}
 function renderHome(){
-  const el=$('#homeBody'),ps=[...projects].sort((a,b)=>b.updated-a.updated);
+  const el=$('#homeBody');el.classList.remove('anim');void el.offsetWidth;el.classList.add('anim');const _x=0,ps=[...projects].sort((a,b)=>b.updated-a.updated);
   document.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on',b.dataset.htab===homeTab));
   if(homeTab==='home'){
-    el.innerHTML=`<div class="hero"><span class="dc">✂</span><h2>وش بتسوي اليوم؟</h2><p>ابدأ فيديو جديد أو كمّل آخر مشروع</p><div class="row"><button class="nb" id="hNew">＋ فيديو جديد</button>${ps.length?'':'<button class="nb2" id="hSample">جرّب مشروع مثال</button>'}</div></div>
+    el.innerHTML=`<div class="hero"><span class="dc">✂</span><h2>وش بتسوي اليوم؟</h2><p>اختر فيديو من جهازك وابدأ على طول</p><div class="row"><button class="nb" id="hNew">＋ فيديو جديد</button>${ps.length?'':'<button class="nb2" id="hSample">جرّب مشروع مثال</button>'}</div></div>
     ${ps.length?`<div class="hsec"><b>آخر المشاريع</b><button class="lnk" data-htab="projects">الكل ‹</button></div><div class="recent">${ps.slice(0,8).map(pcard).join('')}</div>`:''}
     <div class="hsec"><b>الأدوات</b></div><div class="tg">${TOOLS.map(([k,i,n,nw])=>`<button data-tool="${k}" class="${nw?'new':''}"><i>${i}</i>${n}</button>`).join('')}</div>`;
   }else if(homeTab==='projects'){
@@ -1305,10 +1323,10 @@ function renderHome(){
 $('#home').addEventListener('click',async e=>{
   const t=e.target.closest('button,[data-open]');if(!t)return;const d=t.dataset;
   if(d.htab){homeTab=d.htab;menuFor=null;renderHome();return}
-  if(t.id==='hNew')return createProject();
+  if(t.id==='hNew')return pickNew();
   if(t.id==='hSample')return createProject('مشروع مثال',true);
   if(t.id==='hTour'||d.tool==='tour'){const p=[...projects].sort((a,b)=>b.updated-a.updated)[0];if(p)await openProject(p.id);else await createProject('مشروع مثال',true);try{localStorage.removeItem('laqta-tour')}catch(_){}setTimeout(startTour,300);return}
-  if(d.tool){pendingTool=d.tool;await createProject();$('#file').click();return}
+  if(d.tool)return pickNew(d.tool);
   if(d.open)return openProject(d.open);
   if(d.menu){menuFor=menuFor===d.menu?null:d.menu;renderHome();return}
   if(d.rn){menuFor='rn:'+d.rn;renderHome();return}
@@ -1320,9 +1338,20 @@ $('#home').addEventListener('click',async e=>{
   if(d.hf){homeF=d.hf;renderHome();return}
   if(d.th){applyTheme(d.th);try{localStorage.setItem('laqta-theme',d.th)}catch(_){}renderHome();return}
 });
+/* New project always starts by choosing a video: the project is only created once files are picked. */
+function pickNew(tool){pendingTool=tool||null;const f=$('#newFile');f.value='';f.click()}
+function bestRatio(m){const w=m.el&&(m.el.videoWidth||m.el.naturalWidth),h=m.el&&(m.el.videoHeight||m.el.naturalHeight);if(!w||!h)return '9:16';const a=w/h;let best='9:16',d=9;for(const [k,[rw,rh]] of Object.entries(RATIOS)){const x=Math.abs(Math.log(a/(rw/rh)));if(x<d){d=x;best=k}}return best}
+async function startFromFiles(files){
+  if(!files.length)return;await createProject();const list=await addFiles(files);if(!list.length){showHome();return toast('ما قدرنا نفتح الملفات اللي اخترتها')}
+  const vis=list.filter(m=>m.type!=='audio');if(vis[0])setRatio(bestRatio(vis[0]),false);
+  time=0;for(const m of vis)addToTimeline(m);for(const m of list.filter(m=>m.type==='audio')){time=0;addToTimeline(m)}
+  time=0;sel=null;refresh();saveProject(true);
+  const first=vis.find(m=>m.type==='video')||list[0];if(pendingTool)runPendingTool(first);
+}
+$('#newFile').addEventListener('change',e=>{const f=[...e.target.files];if(f.length)startFromFiles(f);else pendingTool=null});
 function runPendingTool(m){
   const tool=pendingTool;pendingTool=null;if(!tool||!m)return;
-  if(m.type==='audio'){addToTimeline(m)}else addToTimeline(m);
+  const c=P.main.find(c=>c.mid===m.id),a=P.audios.find(x=>x.mid===m.id);if(c)sel={k:'m',id:c.id};else if(a)sel={k:'a',id:a.id};refresh();
   const s=getSel();if(!s)return;
   if(tool==='cap'){if(m.type!=='image')autoCaption(s,sel.k);return}
   if(tool==='ext'&&m.type==='video'){extractAudio(s);return}
@@ -1401,7 +1430,7 @@ function capHighlight(){if(propsMode!=='caps'||performance.now()-capTick<200)ret
   requestAnimationFrame(loop);
   for(const f of await DB.all('fonts').catch(()=>[])){try{const ff=new FontFace(f.fam,f.buf.slice(0));await ff.load();document.fonts.add(ff);customFonts.push([f.fam,f.label,true])}catch(e){}}
   await migrate().catch(()=>{});
-  showHome();
+  showHome();endSplash();
   if(document.fonts)FONTS.forEach(([f])=>document.fonts.load(`700 40px "${f}"`));
 })();
 </script>
