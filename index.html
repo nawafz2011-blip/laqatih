@@ -123,6 +123,58 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .slviz{display:block;width:100%;height:60px;background:var(--panel2);border-radius:8px;border:1px solid var(--line)}
 .item .ovl{position:absolute;bottom:4px;right:30px;width:22px;height:22px;border-radius:6px;background:var(--accent2);color:#04261d;display:grid;place-items:center;font-weight:800}
 .clip.ovc{border-color:#22d3a6aa}
+#home{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.hwrap{flex:1;overflow-y:auto;padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 20px max(16px,env(safe-area-inset-left,0px))}
+.hwrap>*{max-width:980px;margin-inline:auto}
+.htop{display:flex;align-items:center;gap:8px;padding:4px 0 12px}
+#homeBody h1{font-size:24px;margin:0}
+.hero{border-radius:22px;padding:22px 20px;background:linear-gradient(140deg,var(--accent),var(--pink));color:#fff;position:relative;overflow:hidden;margin-bottom:6px}
+.hero h2{margin:0;font-size:22px;font-weight:800}.hero p{margin:4px 0 14px;opacity:.9}
+.hero .nb{background:#fff;color:#2b1a66;font-weight:800;padding:11px 20px;border-radius:12px;border:0;font-size:15px}
+.hero .nb2{background:#ffffff26;color:#fff;border:1px solid #ffffff55;padding:11px 16px;border-radius:12px}
+.hero .dc{position:absolute;left:-6px;bottom:-26px;font-size:110px;opacity:.16;pointer-events:none}
+.hsec{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px}.hsec b{font-size:15px}
+.lnk{background:none;border:0;color:var(--mute)}
+.recent{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
+.rc{flex:0 0 auto;width:96px;flex-direction:column;align-items:stretch;padding:0;background:none;border:0;gap:5px;text-align:right}
+.rc i{display:block;height:130px;border-radius:14px;background:var(--panel2) center/cover;position:relative;border:1px solid var(--line)}
+.rc i.r-16-9,.rc i.r-1-1{background-size:contain;background-repeat:no-repeat;background-color:#000}
+.rc em,.pth em{position:absolute;bottom:5px;left:5px;background:#000b;color:#fff;font-size:10px;padding:1px 5px;border-radius:5px;font-style:normal;font-family:var(--mono)}
+.rc small{font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:12px 8px}
+.tg button{flex-direction:column;gap:6px;background:none;border:0;font-size:11.5px;padding:0;position:relative}
+.tg button i{width:54px;height:54px;border-radius:16px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;font-size:22px;font-style:normal}
+.tg .new::after{content:"جديد";position:absolute;top:-6px;right:calc(50% - 32px);background:var(--accent2);color:#04261d;font-size:9px;font-weight:800;padding:1px 5px;border-radius:5px}
+.srch{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit;margin-bottom:10px}
+.pr{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);position:relative}
+.pth{width:64px;height:86px;border-radius:10px;flex-shrink:0;position:relative;padding:0;background:var(--panel2) center/contain no-repeat;background-color:#000}
+.pr .pt{flex:1;min-width:0}.pr .pt b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pr .pt small{color:var(--mute);font-size:11px;display:block;margin-top:3px}
+.pr .pt em{font-style:normal;font-size:10px;background:var(--accent-soft);color:var(--chip-on);padding:1px 7px;border-radius:5px;display:inline-block;margin-top:6px}
+.pr .pt input{width:100%;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;color:var(--text);font:inherit;padding:6px 8px}
+.pr .dots{background:none;border:0;font-size:20px;color:var(--mute);padding:6px 10px}
+.pmenu{position:absolute;left:0;top:52px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;width:170px;box-shadow:0 12px 30px #0008;z-index:5;display:flex;flex-direction:column}
+.pmenu button{background:none;border:0;justify-content:flex-start;padding:9px 10px;border-radius:8px}.pmenu button:hover{background:var(--panel2)}.pmenu .del{color:#ff5c8a}
+.setr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}.setr b{display:block}.setr small{color:var(--mute)}
+.hnav{display:flex;justify-content:space-around;background:var(--panel);border-top:1px solid var(--line);padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))}
+.hnav button{flex-direction:column;gap:1px;background:none;border:0;color:var(--mute);font-size:11px;padding:4px 18px}.hnav b{font-size:19px;font-weight:400}.hnav .on{color:var(--text)}.hnav .on b{color:var(--accent)}
+#homeBtn{font-size:16px;padding:6px 10px}
+#tour{position:fixed;inset:0;z-index:70}
+#tourSpot{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.66),0 0 0 3px var(--accent),0 0 24px var(--accent);transition:all .25s;pointer-events:none}
+#tourTip{position:fixed;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 20px 50px #000a;transition:top .25s,left .25s}
+#tourTip b{font-size:16px}#tourTip p{color:var(--mute);line-height:1.8;margin:6px 0 12px}
+.tth{display:flex;justify-content:space-between;align-items:center;color:var(--mute);font-size:12px;margin-bottom:4px}.tth button{background:none;border:0;color:var(--mute);padding:2px 4px}
+.ttf{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tdots{display:flex;gap:4px}.tdots i{width:6px;height:6px;border-radius:6px;background:var(--line)}.tdots i.done{background:var(--accent)}.tdots i.on{width:16px;background:var(--accent)}
+@media (prefers-reduced-motion:reduce){#tourSpot,#tourTip{transition:none}}
+.cl{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;background:var(--panel2)}
+.cl.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.cl.now{background:var(--accent-soft)}
+.clh{display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:wrap}.clh .sp{flex:1}
+.cn{min-width:20px;height:20px;border-radius:6px;background:var(--line);display:grid;place-items:center;font-size:10px}
+.ct{padding:2px 7px;font-size:10px}.ctime{width:56px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 4px;direction:ltr;text-align:center}
+.cto{color:var(--mute);font-size:10px}.cb{padding:2px 6px;font-size:12px}.cb.act{background:var(--accent);border-color:var(--accent);color:#fff}.cb.del{color:#ff5c8a}
+.cl textarea{min-height:38px;font-size:13px;padding:6px 8px}
+.qopt{display:grid;gap:8px;margin-bottom:14px;text-align:right}.qopt button{justify-content:space-between;padding:10px 12px;flex-wrap:wrap}.qopt button.on{border-color:var(--accent);background:var(--accent-soft)}.qopt small{color:var(--mute)}.qopt button:disabled{opacity:.45}
+.ckl{display:flex;gap:8px;align-items:flex-start;text-align:right;margin-bottom:8px;line-height:1.6}
 .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .presets button{justify-content:center;font-size:15px;font-weight:700;padding:8px 0;background-color:var(--panel2)}
 .hint{color:var(--mute);line-height:1.8}
@@ -192,10 +244,12 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 
 <div class="app">
   <header>
+    <button id="homeBtn" title="الرئيسية والمشاريع" aria-label="الرئيسية">⌂</button>
     <div class="logo"><i>✦</i> لقطة</div>
     <span class="proj hint" id="projInfo"></span>
     <div class="sp"></div>
     <div class="seg" id="ratioTop"></div>
+    <button id="tourBtn" title="الشرح" aria-label="الشرح">؟</button>
     <button id="themeBtn" aria-label="تبديل الوضع">☀</button>
     <button id="undo" title="تراجع (Ctrl+Z)">↶</button>
     <button id="redo" title="إعادة (Ctrl+Shift+Z)">↷</button>
@@ -233,6 +287,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
       <button id="addStk">✿ ستيكر</button>
       <button id="addOv">⧉ طبقة</button>
       <button id="capBtn">📝 كتابة تلقائية</button>
+      <button id="capsBtn">☰ قائمة الترجمة</button>
       <button id="kfBtn" title="كي فريم (K)">◆ كي فريم</button>
       <button id="split" title="تقسيم عند المؤشر (S)">✂ تقسيم</button>
       <button id="dup">⧉ تكرار</button>
@@ -255,6 +310,9 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 </div>
 <input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" hidden>
 <div class="scrim" id="scrim"></div>
+<div id="home" hidden><div class="hwrap"><div class="htop"><div class="logo"><i>✦</i> لقطة</div><span class="sp"></span><button id="hTour2" data-htab="settings" aria-label="الإعدادات">⚙</button></div><div id="homeBody"></div></div>
+  <nav class="hnav"><button data-htab="home" class="on"><b>⌂</b>الرئيسية</button><button data-htab="projects"><b>▤</b>المشاريع</button><button data-htab="settings"><b>⚙</b>الإعدادات</button></nav></div>
+<div id="tour" hidden><div id="tourSpot"></div><div id="tourTip" role="dialog" aria-label="الشرح"></div></div>
 <div class="ov" id="ov" hidden><div class="card" id="ovCard"></div></div>
 <div id="toast"></div>
 
@@ -328,8 +386,9 @@ async function makeMedia(f,extra={}){
 }
 async function addFiles(files){
   let n=0;
-  for(const f of files){const m=await makeMedia(f);if(m){media.set(m.id,m);persistMedia(m);n++}}
+  let first=null;for(const f of files){const m=await makeMedia(f);if(m){media.set(m.id,m);persistMedia(m);n++;first=first||m}}
   libTab='files';renderLib();if(n)toast('تمت إضافة '+n+' ملف');
+  if(pendingTool&&first)runPendingTool(first);
 }
 /* ---------- sound library (synthesized in the browser, no external files) ---------- */
 const SOUNDS=[
@@ -592,42 +651,67 @@ self.onmessage=async e=>{const {model,audio}=e.data;try{
   const T=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2');T.env.allowLocalModels=false;
   if(!pipe||cur!==model){const prog=p=>{if(p.status==='progress'&&p.total)postMessage({type:'dl',p:p.progress})};
     let dev='wasm';try{if(self.navigator&&navigator.gpu&&await navigator.gpu.requestAdapter())dev='webgpu'}catch(_){}
-    try{pipe=await T.pipeline('automatic-speech-recognition',model,{device:dev,dtype:dev==='webgpu'?{encoder_model:'fp32',decoder_model_merged:'q4'}:'q8',progress_callback:prog})}
+    let f16=false;if(dev==='webgpu'){try{const ad=await navigator.gpu.requestAdapter();f16=ad.features.has('shader-f16')}catch(_){}}
+    const big=model.includes('large');
+    try{pipe=await T.pipeline('automatic-speech-recognition',model,{device:dev,dtype:dev==='webgpu'?{encoder_model:big&&f16?'fp16':'fp32',decoder_model_merged:'q4'}:(big?'q4':'q8'),progress_callback:prog})}
     catch(err){if(dev==='wasm')throw err;pipe=await T.pipeline('automatic-speech-recognition',model,{device:'wasm',dtype:'q8',progress_callback:prog})}
     cur=model;postMessage({type:'ready',dev})}
   let i=0;while(i<audio.length){const j=cutPoint(audio,i,30*SR),part=audio.subarray(i,j),off=i/SR;
     const out=await pipe(part,{language:'arabic',task:'transcribe',return_timestamps:true});
     postMessage({type:'chunk',done:j/audio.length,chunks:(out.chunks||[]).map(c=>({text:c.text,s:c.timestamp[0]+off,e:(c.timestamp[1]??c.timestamp[0]+2)+off}))});i=j}
   postMessage({type:'end'})}catch(err){postMessage({type:'err',msg:String(err&&err.message||err)})}};`;
+const ASR_MODELS=[['onnx-community/whisper-base','⚡ سريع','~80MB · للتجربة السريعة'],['onnx-community/whisper-small','✓ دقيق','~250MB · ينفع لأغلب الفيديوهات'],['onnx-community/whisper-large-v3-turbo','★ الأدق','~600MB+ · أفضل سماع للعربي واللهجات · يحتاج كرت شاشة']];
+let asrOpt={model:'onnx-community/whisper-small',clean:true,split:true};
+try{const o=JSON.parse(localStorage.getItem('laqta-asr')||'null');if(o)asrOpt={...asrOpt,...o}}catch(e){}
 function autoCaption(c,kind){
   const m=media.get(c.mid);if(!m||!m.file)return toast('ما لقينا صوت في هذا المقطع');
-  let model='onnx-community/whisper-base';
-  showOv(`<h2>📝 كتابة تلقائية</h2><p>نحوّل الكلام اللي في المقطع إلى نصوص. أول مرة يتحمّل موديل الذكاء الاصطناعي، وبعدها يتخزن في جهازك.</p>
-    <div class="chips" style="justify-content:center;margin-bottom:16px"><button data-asr="onnx-community/whisper-base" class="on">سريع · ~80MB</button><button data-asr="onnx-community/whisper-small">أدق · ~250MB</button></div>
-    <div class="row"><button class="primary" id="asrGo">ابدأ</button><button id="asrX">إلغاء</button></div>`);
-  document.querySelectorAll('[data-asr]').forEach(b=>b.onclick=()=>{model=b.dataset.asr;document.querySelectorAll('[data-asr]').forEach(x=>x.classList.toggle('on',x===b))});
-  $('#asrX').onclick=hideOv;$('#asrGo').onclick=()=>runAsr(c,kind,m,model);
+  const gpu=!!navigator.gpu;if(!gpu&&asrOpt.model.includes('large'))asrOpt.model='onnx-community/whisper-small';
+  const draw=()=>{showOv(`<h2>📝 كتابة تلقائية</h2><p>اختر الدقة. كل ما زادت الدقة، يكتب أحسن ويحتاج وقت أكثر. الموديل يتحمّل أول مرة بس.</p>
+    <div class="qopt">${ASR_MODELS.map(([k,n,d])=>`<button data-asr="${k}" class="${asrOpt.model===k?'on':''}" ${k.includes('large')&&!gpu?'disabled':''}><b>${n}</b><small>${k.includes('large')&&!gpu?'متصفحك ما يدعم كرت الشاشة. جرّب Chrome':d}</small></button>`).join('')}</div>
+    <label class="ckl"><input type="checkbox" id="aClean" ${asrOpt.clean?'checked':''}> 🎧 نظّف الصوت قبل الكتابة (يرفع الصوت الواطي ويخفف الوشوشة)</label>
+    <label class="ckl"><input type="checkbox" id="aSplit" ${asrOpt.split?'checked':''}> ✂️ قسّم الأسطر الطويلة (أقصى 7 كلمات بالسطر)</label>
+    <div class="row" style="margin-top:12px"><button class="primary" id="asrGo">ابدأ</button><button id="asrX">إلغاء</button></div>`);
+    document.querySelectorAll('[data-asr]').forEach(b=>b.onclick=()=>{asrOpt.model=b.dataset.asr;draw()});
+    $('#aClean').onchange=e=>asrOpt.clean=e.target.checked;$('#aSplit').onchange=e=>asrOpt.split=e.target.checked;
+    $('#asrX').onclick=hideOv;$('#asrGo').onclick=()=>{try{localStorage.setItem('laqta-asr',JSON.stringify(asrOpt))}catch(_){}runAsr(c,kind,m,asrOpt.model)}};
+  draw();
 }
+async function cleanAudio(ab){ // high-pass the rumble, low-pass the hiss, compress, then normalize
+  const oc=new OfflineAudioContext(1,ab.length,16000),src=oc.createBufferSource();src.buffer=ab;
+  const hp=oc.createBiquadFilter();hp.type='highpass';hp.frequency.value=90;const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=7000;
+  const cp=oc.createDynamicsCompressor();cp.threshold.value=-32;cp.knee.value=12;cp.ratio.value=5;cp.attack.value=.005;cp.release.value=.2;
+  src.connect(hp);hp.connect(lp);lp.connect(cp);cp.connect(oc.destination);src.start();
+  const out=await oc.startRendering(),d=out.getChannelData(0);let pk=0;for(let i=0;i<d.length;i+=2){const v=Math.abs(d[i]);if(v>pk)pk=v}
+  if(pk>0.001){const g=.95/pk;for(let i=0;i<d.length;i++)d[i]*=g}return d;
+}
+const HALLU=/(اشترك|الاشتراك في القناة|ترجمة نانسي|نانسي قنقر|شكرا للمشاهدة|شكراً للمشاهدة|موسيقى|subscribe)/i;
+function splitLine(ch,max){const w=ch.text.trim().split(/\s+/);if(w.length<=max)return[ch];const n=Math.ceil(w.length/max),per=Math.ceil(w.length/n),out=[],tot=w.join(' ').length;let t=ch.s;
+  for(let i=0;i<w.length;i+=per){const part=w.slice(i,i+per).join(' '),d=(ch.e-ch.s)*part.length/tot;out.push({text:part,s:t,e:t+d});t+=d}return out}
 async function runAsr(c,kind,m,model){
   showOv(`<h2>📝 كتابة تلقائية</h2><div class="bar"><i id="asrBar" style="width:3%"></i></div><p id="asrMsg">جاري تجهيز الصوت…</p><div class="row"><button id="asrStop">إيقاف</button></div>`);
   const msg=t=>{const e=$('#asrMsg');if(e)e.textContent=t},bar=v=>{const e=$('#asrBar');if(e)e.style.width=v+'%'};
   const fail=t=>{msg('ما قدرنا نكمل الكتابة التلقائية. تشتغل على موقع GitHub وتطبيق الأندرويد، وتحتاج إنترنت أول مرة عشان يتحمّل الموديل.');
     const st=$('#asrStop');if(st)st.remove();$('#ovCard').insertAdjacentHTML('beforeend',`<p class="hint" style="direction:ltr;font-family:var(--mono);font-size:11px;word-break:break-word">${esc(String(t).slice(0,300))}</p><div class="row"><button id="asrX">رجوع</button></div>`);$('#asrX').onclick=hideOv};
   let audio;
-  try{const ab=await new OfflineAudioContext(1,1,16000).decodeAudioData(await m.file.arrayBuffer());const d=ab.getChannelData(0);audio=d.slice(Math.floor(c.in*16000),Math.min(d.length,Math.floor(c.out*16000)))}
+  try{const ab=await new OfflineAudioContext(1,1,16000).decodeAudioData(await m.file.arrayBuffer());
+    const full=asrOpt.clean?(msg('جاري تنظيف الصوت…'),await cleanAudio(ab)):ab.getChannelData(0);
+    audio=full.slice(Math.floor(c.in*16000),Math.min(full.length,Math.floor(c.out*16000)))}
   catch(e){return fail(e&&e.message||e)}
-  const mins=(audio.length/16000/60).toFixed(1),base=itemStart(kind,c),sp=c.speed||1;let added=0,committed=false;
+  const energy=new Float32Array(Math.ceil(audio.length/1600));for(let i=0;i<energy.length;i++){let e=0;for(let j=i*1600;j<Math.min(audio.length,(i+1)*1600);j+=4)e+=audio[j]*audio[j];energy[i]=e/400}
+  const loud=(s0,e0)=>{let mx=0;for(let i=Math.floor(s0*10);i<Math.ceil(e0*10)&&i<energy.length;i++)mx=Math.max(mx,energy[i]);return mx>1e-5};
+  const mins=(audio.length/16000/60).toFixed(1),base=itemStart(kind,c),sp=c.speed||1;let added=0,committed=false,lastText='';
   try{if(!asrWorker)asrWorker=new Worker(URL.createObjectURL(new Blob([ASR_WORKER],{type:'text/javascript'})),{type:'module'})}catch(e){return fail(e&&e.message||e)}
-  const finish=()=>{asrJob=null;hideOv();refresh();toast(added?`تمت إضافة ${added} سطر. راجعها وعدّل أي كلمة`:'ما لقينا كلام واضح في هذا المقطع')};
+  const finish=()=>{asrJob=null;hideOv();if(added){openCaps();toast(`تمت إضافة ${added} سطر. راجعها من قائمة الترجمة`)}else{refresh();toast('ما لقينا كلام واضح في هذا المقطع')}};
   $('#asrStop').onclick=()=>{if(asrWorker){asrWorker.terminate();asrWorker=null}finish()};
   asrJob=true;
   asrWorker.onmessage=e=>{const d=e.data;
     if(d.type==='dl'){bar(Math.max(3,d.p*.3));msg('تحميل الموديل… '+Math.round(d.p)+'%')}
     else if(d.type==='ready'){bar(30);msg(`جاري سماع الكلام (${mins} دقيقة)… ${d.dev==='webgpu'?'باستخدام كرت الشاشة':'ممكن ياخذ عدة دقائق'}`)}
     else if(d.type==='chunk'){
-      const list=d.chunks.filter(x=>x.text&&x.text.trim());
+      let list=d.chunks.map(x=>({...x,text:(x.text||'').trim()})).filter(x=>x.text&&!HALLU.test(x.text)&&loud(x.s,x.e)&&x.text!==lastText);
+      if(asrOpt.split)list=list.flatMap(x=>splitLine(x,7));
       if(list.length&&!committed){commit();committed=true}
-      for(const ch of list){P.texts.push(norm({id:uid(),text:ch.text.trim(),start:+(base+ch.s/sp).toFixed(2),dur:+Math.max(.4,(ch.e-ch.s)/sp).toFixed(2),size:Math.round(cv.width*.055),color:'#ffffff',font:'Tajawal',weight:700,x:.5,y:.82,bg:true,bgColor:'rgba(0,0,0,.62)',shadow:0,ain:'fade',aout:'fade',caption:true}));added++}
+      for(const ch of list){lastText=ch.text;P.texts.push(norm({id:uid(),text:ch.text,start:+(base+ch.s/sp).toFixed(2),dur:+Math.max(.4,(ch.e-ch.s)/sp).toFixed(2),size:Math.round(cv.width*.055),color:'#ffffff',font:'Tajawal',weight:700,x:.5,y:.82,bg:true,bgColor:'rgba(0,0,0,.62)',shadow:0,ain:'fade',aout:'fade',caption:true}));added++}
       renderTimeline();bar(30+d.done*70);msg(`كتبنا ${Math.round(d.done*100)}% · ${added} سطر لين الحين`)}
     else if(d.type==='end')finish();
     else if(d.type==='err'){asrWorker.terminate();asrWorker=null;if(added)finish();else fail(d.msg)}
@@ -764,7 +848,7 @@ function loop(now){
       else{if(!waitT)waitT=now;if(now-waitT<1500)t0=now-time*1000;else time=(now-t0)/1000}
     }else time=(now-t0)/1000;
     const T=total();if(time>=T){time=T;if(exporting)finishExport();else pause()}}
-  sync();draw();
+  sync();draw();capHighlight();
   const T=total();$('#tc').innerHTML=`<b>${fmt(time)}</b> / ${fmt(T)}`;
   if(exporting){const p=T?time/T:1;const b=$('#expBar');if(b)b.style.width=(p*100).toFixed(1)+'%';const s=$('#expPct');if(s)s.textContent=Math.round(p*100)+'%'}
   const x=time*pps;$('#ph').style.transform=`translateX(${x}px)`;
@@ -911,13 +995,15 @@ $('#libSounds').addEventListener('click',async e=>{
 });
 function renderProps(){
   const s=getSel(),el=$('#props'),x='<button class="mob sheet-x" data-close>✕</button>';
+  if(propsMode==='caps'&&(!sel||(sel.k==='t'&&s&&s.caption)))return renderCaps(el);
+  if(propsMode==='caps')propsMode=null;
   if(!s){el.innerHTML=`<h3>المشروع ${x}</h3>
     <div class="field"><span class="lab">مقاس الفيديو</span><div class="seg" id="ratioSide">${ratioBtns()}</div></div>
     <p class="hint">اضغط على أي مقطع في الخط الزمني أو على نص في المعاينة عشان تعدّله.<br>
     <kbd>Space</kbd> تشغيل · <kbd>S</kbd> تقسيم · <kbd>K</kbd> كي فريم · <kbd>Delete</kbd> حذف · <kbd>Ctrl+Z</kbd> تراجع</p>
     <p class="hint">مشروعك ينحفظ تلقائياً في هذا المتصفح، مع الملفات والخطوط اللي رفعتها.</p>
-    <button id="newProj">🗑 مشروع جديد</button>`;
-    $('#newProj').onclick=e=>{const b=e.currentTarget;if(b.dataset.c){newProject();return}b.dataset.c='1';b.textContent='متأكد؟ اضغط مرة ثانية للحذف';b.classList.add('primary');setTimeout(()=>{if(b.isConnected){delete b.dataset.c;b.textContent='🗑 مشروع جديد';b.classList.remove('primary')}},4000)};return}
+    <div class="row"><button id="pHome">⌂ الرئيسية والمشاريع</button><button id="pCaps">📝 قائمة الترجمة</button><button id="pTour">🎓 الشرح</button></div>`;
+    $('#pHome').onclick=showHome;$('#pCaps').onclick=openCaps;$('#pTour').onclick=startTour;return}
   if(sel.k==='t'){
     norm(s);const tab=el._tab||'font';
     const sw=(attr,cur)=>COLORS.map(c=>`<button data-${attr}="${c}" class="${c===cur?'on':''}" style="background:${c}" aria-label="${c}"></button>`).join('');
@@ -1032,6 +1118,7 @@ function refresh(){renderTimeline();renderProps();updBtns();refreshInfo()}
 function openSheet(id){if(matchMedia('(max-width:899px)').matches){closeSheets();$('#'+id).classList.add('open');$('#scrim').classList.add('open')}}
 function closeSheets(){document.querySelectorAll('.panel.open').forEach(p=>p.classList.remove('open'));$('#scrim').classList.remove('open')}
 $('#scrim').onclick=closeSheets;$('#mLib').onclick=()=>{libTab='files';renderLib();openSheet('lib')};
+$('#homeBtn').onclick=showHome;$('#tourBtn').onclick=startTour;$('#capsBtn').onclick=openCaps;
 $('#addOv').onclick=()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة عشان تحطها فوق الفيديو')};
 $('#capBtn').onclick=()=>{let s=getSel(),k=sel&&sel.k;const ok=s&&(k==='a'||((k==='m'||k==='o')&&(media.get(s.mid)||{}).type==='video'));if(!ok){layout();s=P.main.find(c=>(media.get(c.mid)||{}).type==='video');k='m'}if(!s)return toast('أضف فيديو فيه كلام أول');autoCaption(s,k)};
 $('#addStk').onclick=()=>{libTab='stickers';renderLib();openSheet('lib')};
@@ -1110,43 +1197,212 @@ function sampleImage(name,stops,sun){
   const url=c.toDataURL('image/jpeg',.85),img=new Image();img.src=url;const bin=atob(url.split(',')[1]),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
   const m={id:uid(),type:'image',name,url,el:img,duration:3,thumb:url,sample:true,file:new File([u8],name,{type:'image/jpeg'})};media.set(m.id,m);persistMedia(m);return m;
 }
-/* ---------- autosave (IndexedDB, stays in this browser) ---------- */
+/* ---------- projects & autosave (IndexedDB, stays in this browser) ---------- */
 const DB={db:null,
-  open(){if(this.db)return this.db;return this.db=new Promise((res,rej)=>{const q=indexedDB.open('laqta',1);q.onupgradeneeded=()=>{const d=q.result;['kv','media','fonts'].forEach(n=>d.createObjectStore(n))};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
+  open(){if(this.db)return this.db;return this.db=new Promise((res,rej)=>{const q=indexedDB.open('laqta',2);q.onupgradeneeded=()=>{const d=q.result;['kv','media','fonts','projects'].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n)})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
   async tx(st,mode,fn){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction(st,mode),o=t.objectStore(st),q=fn(o);t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})},
-  put(st,k,v){return this.tx(st,'readwrite',o=>o.put(v,k))},get(st,k){return this.tx(st,'readonly',o=>o.get(k))},
-  async all(st){const d=await this.open();return new Promise((res,rej)=>{const out=[],q=d.transaction(st).objectStore(st).openCursor();q.onsuccess=()=>{const c=q.result;if(c){out.push(c.value);c.continue()}else res(out)};q.onerror=()=>rej(q.error)})},
-  clear(){return Promise.all(['kv','media','fonts'].map(n=>this.tx(n,'readwrite',o=>o.clear())))}};
-function persistMedia(m){const rec={id:m.id,type:m.type,name:m.name,duration:m.duration,lib:!!m.lib,sample:!!m.sample,soundKey:m.soundKey||null,srcOf:m.srcOf||null,wave:m.srcOf?m.wave:null,blob:m.srcOf?null:m.file};DB.put('media',m.id,rec).catch(()=>{})}
-async function restore(){
-  try{
-    const pj=await DB.get('kv','project');if(!pj)return false;
-    for(const f of await DB.all('fonts')){try{const ff=new FontFace(f.fam,f.buf.slice(0));await ff.load();document.fonts.add(ff);customFonts.push([f.fam,f.label,true])}catch(e){}}
-    const recs=await DB.all('media'),later=[];
-    for(const r of recs){if(r.srcOf){later.push(r);continue}if(!r.blob)continue;
-      const f=r.blob instanceof File?r.blob:new File([r.blob],r.name,{type:r.blob.type});
-      const m=await makeMedia(f,{id:r.id,lib:r.lib,sample:r.sample,soundKey:r.soundKey,duration:r.duration});
-      if(m){media.set(m.id,m);if(r.soundKey)soundCache[r.soundKey]=m}}
-    for(const r of later){const v=media.get(r.srcOf);if(!v)continue;media.set(r.id,{id:r.id,type:'audio',name:r.name,url:v.url,file:v.file,duration:r.duration,wave:r.wave,lib:true,srcOf:r.srcOf});v.audioMedia=r.id}
-    P=JSON.parse(pj);P.main=P.main.filter(c=>media.has(c.mid));P.audios=P.audios.filter(a=>media.has(a.mid));P.overlays=(P.overlays||[]).filter(o=>media.has(o.mid));return true;
-  }catch(e){return false}
+  put(st,k,v){return this.tx(st,'readwrite',o=>o.put(v,k))},get(st,k){return this.tx(st,'readonly',o=>o.get(k))},del(st,k){return this.tx(st,'readwrite',o=>o.delete(k))},
+  async all(st){const d=await this.open();return new Promise((res,rej)=>{const out=[],q=d.transaction(st).objectStore(st).openCursor();q.onsuccess=()=>{const c=q.result;if(c){out.push(c.value);c.continue()}else res(out)};q.onerror=()=>rej(q.error)})}};
+let curPid=null,curName='',projects=[],lastSaved='',saveOK=true;
+function persistMedia(m){m.pid=m.pid||curPid;const rec={id:m.id,pid:m.pid,type:m.type,name:m.name,duration:m.duration,lib:!!m.lib,sample:!!m.sample,soundKey:m.soundKey||null,srcOf:m.srcOf||null,wave:m.srcOf?m.wave:null,blob:m.srcOf?null:m.file};DB.put('media',m.id,rec).catch(()=>{saveOK=false})}
+const projJSON=()=>JSON.stringify(P,(k,v)=>k[0]==='_'?undefined:v);
+function thumbNow(){try{const c=document.createElement('canvas'),k=160/Math.max(cv.width,cv.height);c.width=Math.round(cv.width*k);c.height=Math.round(cv.height*k);c.getContext('2d').drawImage(cv,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)}catch(e){return ''}}
+async function saveProject(force){
+  if(!curPid)return;const j=projJSON();if(!force&&j===lastSaved)return;lastSaved=j;
+  const old=projects.find(x=>x.id===curPid)||{created:Date.now()};
+  const rec={id:curPid,name:curName,json:j,created:old.created,updated:Date.now(),ratio:P.ratio,dur:total(),clips:P.main.length,caps:P.texts.some(t=>t.caption),thumb:thumbNow()};
+  try{await DB.put('projects',curPid,rec);saveOK=true;const i=projects.findIndex(x=>x.id===curPid);if(i<0)projects.push(rec);else projects[i]=rec}catch(e){saveOK=false}refreshInfo();
 }
-let lastSaved='',saveOK=true;
-setInterval(()=>{const j=JSON.stringify(P,(k,v)=>k[0]==='_'?undefined:v);if(j===lastSaved)return;lastSaved=j;DB.put('kv','project',j).then(()=>{saveOK=true;$('#projInfo').dataset.saved='1';refreshInfo()}).catch(()=>{saveOK=false;refreshInfo()})},1500);
-function refreshInfo(){$('#projInfo').textContent=`${P.main.length} مقاطع · ${fmt(total(),false)}${saveOK?' · محفوظ تلقائياً ✓':' · الحفظ غير متاح هنا'}`}
-async function newProject(){pause();await DB.clear().catch(()=>{});media.clear();clipP.clear();for(const k in soundCache)delete soundCache[k];customFonts=[];hist=[];fut=[];sel=null;time=0;P={ratio:P.ratio,main:[],texts:[],audios:[],overlays:[]};ovP.clear();renderLib();refresh();toast('بدأت مشروع جديد')}
+setInterval(()=>{if(curPid&&!exporting)saveProject()},1500);
+function refreshInfo(){$('#projInfo').textContent=`${curName?curName+' · ':''}${fmt(total(),false)}${saveOK?' · محفوظ تلقائياً ✓':' · الحفظ غير متاح هنا'}`}
+function unloadMedia(){pause();for(const m of media.values())if(m.url&&m.url.startsWith('blob:')&&!m.srcOf)URL.revokeObjectURL(m.url);media.clear();clipP.clear();ovP.clear();for(const k in soundCache)delete soundCache[k]}
+async function loadMediaFor(pid,json){
+  const recs=await DB.all('media'),need=new Set();try{const q=JSON.parse(json);[...q.main,...q.audios,...(q.overlays||[])].forEach(c=>need.add(c.mid))}catch(e){}
+  const mine=recs.filter(r=>r.pid===pid||need.has(r.id)),later=[];
+  for(const r of mine){if(r.srcOf){later.push(r);continue}if(!r.blob)continue;
+    const f=r.blob instanceof File?r.blob:new File([r.blob],r.name,{type:r.blob.type});
+    const m=await makeMedia(f,{id:r.id,pid:r.pid,lib:r.lib,sample:r.sample,soundKey:r.soundKey,duration:r.duration});
+    if(m){media.set(m.id,m);if(r.soundKey)soundCache[r.soundKey]=m}}
+  for(const r of later){let v=media.get(r.srcOf);if(!v){const src=recs.find(x=>x.id===r.srcOf);if(src&&src.blob){v=await makeMedia(src.blob instanceof File?src.blob:new File([src.blob],src.name,{type:src.blob.type}),{id:src.id,pid:src.pid,duration:src.duration});if(v)media.set(v.id,v)}}
+    if(!v)continue;media.set(r.id,{id:r.id,pid:r.pid,type:'audio',name:r.name,url:v.url,file:v.file,duration:r.duration,wave:r.wave,lib:true,srcOf:r.srcOf});v.audioMedia=r.id}
+}
+async function openProject(pid){
+  await saveProject();showLoading('جاري فتح المشروع…');unloadMedia();
+  const rec=await DB.get('projects',pid).catch(()=>null);if(!rec){hideLoading();return toast('ما لقينا المشروع')}
+  await loadMediaFor(pid,rec.json);
+  curPid=pid;curName=rec.name;P=JSON.parse(rec.json);P.overlays=P.overlays||[];
+  P.main=P.main.filter(c=>media.has(c.mid));P.audios=P.audios.filter(a=>media.has(a.mid));P.overlays=P.overlays.filter(o=>media.has(o.mid));
+  hist=[];fut=[];sel=null;propsMode=null;time=0;lastSaved=projJSON();
+  setRatio(P.ratio||'9:16',false);libTab='files';renderLib();refresh();hideLoading();hideHome();
+  try{if(!localStorage.getItem('laqta-tour'))setTimeout(startTour,600)}catch(e){}
+}
+async function createProject(name,sample){
+  await saveProject();unloadMedia();
+  curPid='p'+Date.now().toString(36)+uid();curName=name||nextName();P={ratio:'9:16',main:[],texts:[],audios:[],overlays:[]};
+  if(sample)freshSample();hist=[];fut=[];sel=null;propsMode=null;time=0;lastSaved='';
+  setRatio('9:16',false);libTab='files';renderLib();refresh();await saveProject(true);hideHome();
+  try{if(!localStorage.getItem('laqta-tour'))setTimeout(startTour,600)}catch(e){}
+}
+function nextName(){let n=projects.length+1;while(projects.some(p=>p.name==='مشروع '+n))n++;return 'مشروع '+n}
+async function deleteProject(pid){
+  await DB.del('projects',pid).catch(()=>{});projects=projects.filter(p=>p.id!==pid);
+  const used=new Set();for(const p of projects){try{const q=JSON.parse(p.json);[...q.main,...q.audios,...(q.overlays||[])].forEach(c=>used.add(c.mid))}catch(e){}}
+  for(const r of await DB.all('media'))if(r.pid===pid&&!used.has(r.id)&&!(r.srcOf&&used.has(r.srcOf)))await DB.del('media',r.id).catch(()=>{});
+  if(curPid===pid){curPid=null;unloadMedia()}renderHome();toast('تم حذف المشروع');
+}
+async function duplicateProject(pid){const r=projects.find(p=>p.id===pid);if(!r)return;const n={...r,id:'p'+Date.now().toString(36)+uid(),name:r.name+' (نسخة)',created:Date.now(),updated:Date.now()};await DB.put('projects',n.id,n);projects.push(n);renderHome();toast('تم عمل نسخة')}
+async function renameProject(pid,name){const r=projects.find(p=>p.id===pid);if(!r||!name.trim())return;r.name=name.trim();await DB.put('projects',pid,r);if(pid===curPid){curName=r.name;refreshInfo()}renderHome()}
+async function migrate(){
+  projects=await DB.all('projects').catch(()=>[]);
+  const old=await DB.get('kv','project').catch(()=>null);
+  if(old&&!projects.length){const id='p'+Date.now().toString(36)+uid(),rec={id,name:'مشروعي الأول',json:old,created:Date.now(),updated:Date.now(),ratio:'9:16',dur:0,clips:0,caps:old.includes('"caption":true'),thumb:''};
+    try{const q=JSON.parse(old);rec.ratio=q.ratio;rec.clips=q.main.length}catch(e){}
+    for(const r of await DB.all('media'))if(!r.pid){r.pid=id;await DB.put('media',r.id,r)}
+    await DB.put('projects',id,rec);await DB.del('kv','project');projects=[rec]}
+}
+function newProject(){createProject()}
 function freshSample(){
   const a=sampleImage('غروب.jpg',['#f6a35b','#e0607a','#7a2f6e','#1e1236'],'#ffe2a8'),b=sampleImage('ليل.jpg',['#5ac8fa','#1d5f8a','#0d2b3e','#08121c'],'#f4f1ff');
   P.main.push({id:uid(),mid:a.id,in:0,out:4,vol:1,fit:'cover'},{id:uid(),mid:b.id,in:0,out:3,vol:1,fit:'cover'});
   P.texts.push(norm({id:uid(),text:'لحظة الغروب ✨',start:.3,dur:3.4,size:60,color:'#ffffff',font:'Cairo',weight:800,x:.5,y:.18,bg:false,ain:'type',aout:'fade'}),norm({id:uid(),text:'وجاء الليل 🌙',start:4.2,dur:2.6,size:52,color:'#5ac8fa',font:'Reem Kufi',x:.5,y:.8,bg:false,glow:true,shadow:1,ain:'pop',aout:'zoom'}));
 }
+function showLoading(t){showOv(`<h2>${t}</h2><div class="bar"><i style="width:60%"></i></div>`)}
+function hideLoading(){hideOv()}
+
+/* ---------- home screen ---------- */
+let homeTab='home',homeQ='',homeF='all',pendingTool=null,menuFor=null;
+const TOOLS=[['cap','📝','كتابة تلقائية',1],['sil','🔇','حذف الصمت'],['voice','🎤','مغيّر الصوت'],['ext','♫','استخراج الصوت'],['ovl','⧉','طبقات'],['fx','🌀','تأثيرات'],['kf','◆','كي فريم'],['tour','🎓','الشرح']];
+const ago=t=>{const d=(Date.now()-t)/864e5;if(d<1&&new Date(t).getDate()===new Date().getDate())return 'اليوم';if(d<2)return 'أمس';return new Date(t).toLocaleDateString('ar-SA-u-nu-latn',{day:'numeric',month:'long'})};
+function showHome(){pause();saveProject();homeTab='home';menuFor=null;renderHome();$('#home').hidden=false}
+function hideHome(){$('#home').hidden=true}
+function pcard(p){return `<button class="rc" data-open="${p.id}"><i style="${p.thumb?`background-image:url('${p.thumb}')`:''}" class="r-${p.ratio.replace(':','-')}"><em>${fmt(p.dur||0,false)}</em></i><small>${esc(p.name)}</small></button>`}
+function prow(p){const on=menuFor===p.id;return `<div class="pr" data-pid="${p.id}"><button class="pth" data-open="${p.id}" style="${p.thumb?`background-image:url('${p.thumb}')`:''}"><em>${fmt(p.dur||0,false)}</em></button>
+  <div class="pt">${menuFor==='rn:'+p.id?`<input id="rnIn" value="${esc(p.name)}" aria-label="اسم المشروع"><div class="row" style="margin-top:6px"><button class="primary" data-rnok="${p.id}">حفظ</button><button data-rnx>إلغاء</button></div>`:`<b>${esc(p.name)}</b><small>${ago(p.updated)} · ${fmt(p.dur||0,false)}</small><em>${p.ratio}${p.caps?' · فيها ترجمة':''}</em>`}</div>
+  <button class="dots" data-menu="${p.id}" aria-label="خيارات">⋯</button>
+  ${on?`<div class="pmenu"><button data-open="${p.id}">✏️ تعديل</button><button data-rn="${p.id}">✎ إعادة تسمية</button><button data-dup="${p.id}">⧉ نسخة ثانية</button><button data-exp="${p.id}">⬇ تصدير</button><button class="del" data-del="${p.id}">🗑 حذف</button></div>`:''}</div>`}
+function renderHome(){
+  const el=$('#homeBody'),ps=[...projects].sort((a,b)=>b.updated-a.updated);
+  document.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on',b.dataset.htab===homeTab));
+  if(homeTab==='home'){
+    el.innerHTML=`<div class="hero"><span class="dc">✂</span><h2>وش بتسوي اليوم؟</h2><p>ابدأ فيديو جديد أو كمّل آخر مشروع</p><div class="row"><button class="nb" id="hNew">＋ فيديو جديد</button>${ps.length?'':'<button class="nb2" id="hSample">جرّب مشروع مثال</button>'}</div></div>
+    ${ps.length?`<div class="hsec"><b>آخر المشاريع</b><button class="lnk" data-htab="projects">الكل ‹</button></div><div class="recent">${ps.slice(0,8).map(pcard).join('')}</div>`:''}
+    <div class="hsec"><b>الأدوات</b></div><div class="tg">${TOOLS.map(([k,i,n,nw])=>`<button data-tool="${k}" class="${nw?'new':''}"><i>${i}</i>${n}</button>`).join('')}</div>`;
+  }else if(homeTab==='projects'){
+    const f=ps.filter(p=>(!homeQ||p.name.includes(homeQ))&&(homeF==='all'||(homeF==='caps'?p.caps:p.ratio===homeF)));
+    el.innerHTML=`<div class="hsec"><h1>المشاريع</h1><button class="primary" id="hNew">＋ جديد</button></div><input id="hQ" class="srch" placeholder="🔍 ابحث في المشاريع" value="${esc(homeQ)}">
+    <div class="chips" style="margin-bottom:10px">${[['all',`الكل (${ps.length})`],['9:16','9:16'],['16:9','16:9'],['1:1','1:1'],['caps','فيها ترجمة']].map(([k,n])=>`<button data-hf="${k}" class="${homeF===k?'on':''}">${n}</button>`).join('')}</div>
+    ${f.length?f.map(prow).join(''):`<p class="hint" style="text-align:center;padding:30px 0">${ps.length?'ما فيه مشاريع تطابق البحث.':'ما عندك مشاريع للحين. اضغط «＋ جديد» عشان تبدأ.'}</p>`}`;
+    const q=$('#hQ');q.oninput=e=>{homeQ=e.target.value;const pos=q.selectionStart;renderHome();const n=$('#hQ');n.focus();n.setSelectionRange(pos,pos)};
+    const rn=$('#rnIn');if(rn){rn.focus();rn.select();rn.onkeydown=e=>{if(e.key==='Enter')renameProject(menuFor.slice(3),rn.value).then(()=>{menuFor=null;renderHome()});if(e.key==='Escape'){menuFor=null;renderHome()}}}
+  }else{
+    let th='dark';th=document.documentElement.getAttribute('data-theme');
+    el.innerHTML=`<h1>الإعدادات</h1><div class="setr"><div><b>الوضع</b><small>ليلي أو صباحي</small></div><div class="seg"><button data-th="dark" class="${th==='dark'?'on':''}">☾ ليلي</button><button data-th="light" class="${th==='light'?'on':''}">☀ صباحي</button></div></div>
+    <div class="setr"><div><b>الشرح التفاعلي</b><small>يوريك كل زر وش يسوي</small></div><button id="hTour">🎓 ابدأ الشرح</button></div>
+    <div class="setr"><div><b>المشاريع المحفوظة</b><small>${projects.length} مشروع في هذا المتصفح</small></div></div>
+    <p class="hint">كل شي ينحفظ في هذا الجهاز بس. لو مسحت بيانات المتصفح تنحذف المشاريع.</p>`;
+  }
+}
+$('#home').addEventListener('click',async e=>{
+  const t=e.target.closest('button,[data-open]');if(!t)return;const d=t.dataset;
+  if(d.htab){homeTab=d.htab;menuFor=null;renderHome();return}
+  if(t.id==='hNew')return createProject();
+  if(t.id==='hSample')return createProject('مشروع مثال',true);
+  if(t.id==='hTour'||d.tool==='tour'){const p=[...projects].sort((a,b)=>b.updated-a.updated)[0];if(p)await openProject(p.id);else await createProject('مشروع مثال',true);try{localStorage.removeItem('laqta-tour')}catch(_){}setTimeout(startTour,300);return}
+  if(d.tool){pendingTool=d.tool;await createProject();$('#file').click();return}
+  if(d.open)return openProject(d.open);
+  if(d.menu){menuFor=menuFor===d.menu?null:d.menu;renderHome();return}
+  if(d.rn){menuFor='rn:'+d.rn;renderHome();return}
+  if(d.rnok){await renameProject(d.rnok,$('#rnIn').value);menuFor=null;renderHome();return}
+  if('rnx' in d){menuFor=null;renderHome();return}
+  if(d.dup){menuFor=null;return duplicateProject(d.dup)}
+  if(d.exp){menuFor=null;await openProject(d.exp);return startExport()}
+  if(d.del){if(t.dataset.c){menuFor=null;return deleteProject(d.del)}t.dataset.c='1';t.textContent='اضغط مرة ثانية للتأكيد';return}
+  if(d.hf){homeF=d.hf;renderHome();return}
+  if(d.th){applyTheme(d.th);try{localStorage.setItem('laqta-theme',d.th)}catch(_){}renderHome();return}
+});
+function runPendingTool(m){
+  const tool=pendingTool;pendingTool=null;if(!tool||!m)return;
+  if(m.type==='audio'){addToTimeline(m)}else addToTimeline(m);
+  const s=getSel();if(!s)return;
+  if(tool==='cap'){if(m.type!=='image')autoCaption(s,sel.k);return}
+  if(tool==='ext'&&m.type==='video'){extractAudio(s);return}
+  if(tool==='ovl'){toast('اضغط ⧉ على أي فيديو أو صورة في الوسائط عشان تحطها فوق الفيديو');openSheet('lib');return}
+  if(tool==='kf'){kfToggle();return}
+  openSheet('props');const id={sil:'slThr',voice:'pCap',fx:'pFxI'}[tool];setTimeout(()=>{const e=tool==='voice'?document.querySelector('[data-voice]'):tool==='fx'?document.querySelector('[data-fx]'):$('#'+id);if(e)e.scrollIntoView({block:'center',behavior:'smooth'})},120);
+}
+
+/* ---------- guided tour ---------- */
+const TOUR=[
+  [['#drop','#mLib'],'▣ الوسائط','ارفع فيديوهاتك وصورك وصوتك من هنا. بعدها اضغط ＋ على أي ملف عشان ينضاف للخط الزمني، أو ⧉ عشان تحطه طبقة فوق الفيديو.'],
+  [['#cv'],'المعاينة','هنا تشوف الفيديو. تقدر تسحب النص أو الطبقة بإصبعك عشان تغيّر مكانها.'],
+  [['#play'],'▶ تشغيل','شغّل وأوقف الفيديو. على الكمبيوتر تقدر تستخدم زر المسافة.'],
+  [['#scroll'],'الخط الزمني','كل مسار له نوع: نص، طبقة، فيديو، صوت. اسحب طرف المقطع عشان تقصه، واسحب المقطع كامل عشان تغيّر ترتيبه. اضغط على المسطرة عشان تروح لأي وقت.'],
+  [['#split'],'✂ تقسيم','حط المؤشر الأبيض في المكان اللي تبيه واضغط هنا، ويتقسم المقطع لجزئين. بعدها تقدر تحذف جزء، أو تضغط ⇄ بينهم وتحط انتقال.'],
+  [['#addText'],'T نص','يضيف نص فوق الفيديو. تقدر تغيّر الخط واللون والحركة، وترفع خط من جهازك.'],
+  [['#addSound'],'♫ صوت','موسيقى ومؤثرات جاهزة، وتقدر تستخرج الصوت من أي فيديو.'],
+  [['#capBtn'],'📝 كتابة تلقائية','يسمع الكلام اللي في الفيديو ويكتبه نصوص بتوقيتها. بعدها تعدّل الأسطر من قائمة الترجمة.'],
+  [['#kfBtn'],'◆ كي فريم','يخليك تحرّك العنصر من مكان لمكان. حط كي فريم، روح لوقت ثاني، وغيّر المكان أو الحجم.'],
+  [['#props','#mProps'],'⚙ الخصائص','لما تضغط على أي مقطع تطلع إعداداته هنا: السرعة، مغيّر الصوت، حذف الصمت، الفلاتر، التأثيرات، والقص.'],
+  [['#exportBtn'],'⬇ تصدير','لما تخلص، اضغط هنا ويطلع لك الفيديو جاهز للحفظ.'],
+  [['#homeBtn'],'⌂ الرئيسية','ترجعك لقائمة مشاريعك. كل شي ينحفظ تلقائياً، فتقدر ترجع تكمل أي وقت.']];
+let tourI=-1;
+function visibleEl(list){for(const q of list){const e=$(q);if(!e)continue;const r=e.getBoundingClientRect();if(r.width>4&&r.height>4&&r.bottom>0&&r.top<innerHeight&&getComputedStyle(e).visibility!=='hidden')return e}return null}
+function startTour(){closeSheets();hideHome();tourI=0;showTour()}
+function endTour(){tourI=-1;$('#tour').hidden=true;try{localStorage.setItem('laqta-tour','1')}catch(e){}}
+function showTour(){
+  if(tourI<0)return;if(tourI>=TOUR.length)return endTour();
+  const [qs,title,text]=TOUR[tourI],el=visibleEl(qs);if(!el){tourI++;return showTour()}
+  const r=el.getBoundingClientRect(),pad=6,sp=$('#tourSpot'),tip=$('#tourTip');$('#tour').hidden=false;
+  Object.assign(sp.style,{left:r.left-pad+'px',top:r.top-pad+'px',width:r.width+pad*2+'px',height:r.height+pad*2+'px'});
+  tip.innerHTML=`<div class="tth"><span>الخطوة ${tourI+1} من ${TOUR.length}</span><button id="tSkip">✕ تخطي</button></div><b>${title}</b><p>${text}</p>
+    <div class="ttf"><span class="tdots">${TOUR.map((_,i)=>`<i class="${i===tourI?'on':i<tourI?'done':''}"></i>`).join('')}</span><span class="row">${tourI?'<button id="tPrev">السابق</button>':''}<button class="primary" id="tNext">${tourI===TOUR.length-1?'خلصنا ✓':'التالي ←'}</button></span></div>`;
+  const W=Math.min(340,innerWidth-24);tip.style.width=W+'px';const th=tip.offsetHeight;
+  let top=r.bottom+14;if(top+th>innerHeight-10)top=r.top-th-14;if(top<10)top=Math.max(10,Math.min(innerHeight-th-10,r.top+r.height/2-th/2));
+  tip.style.top=top+'px';tip.style.left=clamp(r.left+r.width/2-W/2,12,innerWidth-W-12)+'px';
+  $('#tSkip').onclick=endTour;$('#tNext').onclick=()=>{tourI++;showTour()};const pv=$('#tPrev');if(pv)pv.onclick=()=>{tourI--;showTour()};$('#tNext').focus();
+}
+addEventListener('resize',()=>{if(tourI>=0)showTour()});
+document.addEventListener('keydown',e=>{if(tourI<0)return;if(e.key==='Escape')endTour();else if(e.key==='ArrowLeft'){tourI++;showTour()}else if(e.key==='ArrowRight'&&tourI>0){tourI--;showTour()}},true);
+
+/* ---------- captions list ---------- */
+let propsMode=null;
+const caps=()=>P.texts.filter(t=>t.caption).sort((a,b)=>a.start-b.start);
+function parseT(v){v=String(v).trim().replace(',','.');const m=v.match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/);return m?(+(m[1]||0))*60+ +m[2]:NaN}
+function openCaps(){sel=null;propsMode='caps';refresh();openSheet('props')}
+function renderCaps(el){
+  const L=caps(),x='<button class="mob sheet-x" data-close>✕</button>';
+  el.innerHTML=`<h3>📝 قائمة الترجمة <small>${L.length} سطر</small> ${x}</h3>
+  <div class="row" style="margin-bottom:10px"><button class="primary" id="cAdd">＋ سطر جديد</button><button id="cMerge" title="دمج السطر المحدد مع اللي بعده">⇅ دمج</button><button id="cClose">رجوع</button></div>
+  ${L.length?`<div class="field"><span class="lab">🎨 نمط موحد لكل الأسطر</span><div class="presets">${PRESETS.map(([n,p],i)=>`<button data-cpre="${i}" style="font-family:'${p.font}';color:${p.color};${p.bg?`background:${p.bgColor};`:''}${p.stroke?`-webkit-text-stroke:1px ${p.strokeColor};`:''}${p.glow?`text-shadow:0 0 8px ${p.color};`:''}">${n}</button>`).join('')}</div></div>
+  <div class="field"><label for="cSize">حجم الخط للكل · <span id="cSizeV">${L[0].size}</span></label><input type="range" id="cSize" min="16" max="${Math.round(cv.width*.12)}" value="${L[0].size}"></div>
+  <p class="hint" style="margin:0 0 10px">اضغط ▶ عشان تروح للسطر. اكتب الوقت بالشكل 0:12.5. ⬆ يحط السطر فوق الشاشة، و⬇ يرجعه تحت.</p>`:'<p class="hint">ما فيه أسطر للحين. استخدم «📝 كتابة تلقائية» أو اضغط «＋ سطر جديد».</p>'}
+  <div id="cList">${L.map((t,i)=>`<div class="cl${sel&&sel.id===t.id?' sel':''}" data-cid="${t.id}"><div class="clh"><span class="cn">${i+1}</span><button class="ct" data-cgo="${t.id}" title="روح للسطر">▶</button>
+    <input class="ctime" data-cs="${t.id}" value="${fmt(t.start).replace(/^00:/,'0:')}" aria-label="البداية"><span class="cto">←</span><input class="ctime" data-ce="${t.id}" value="${fmt(t.start+t.dur).replace(/^00:/,'0:')}" aria-label="النهاية">
+    <span class="sp"></span><button class="cb${t.y<.5?' act':''}" data-cup="${t.id}" title="فوق الشاشة">⬆</button><button class="cb${t.y>=.5?' act':''}" data-cdn="${t.id}" title="تحت الشاشة">⬇</button><button class="cb del" data-cdel="${t.id}" title="حذف">🗑</button></div>
+    <textarea data-ctx="${t.id}" dir="rtl" aria-label="نص السطر">${esc(t.text)}</textarea></div>`).join('')}</div>`;
+  const byId=id=>P.texts.find(t=>t.id===id);
+  $('#cAdd').onclick=()=>{commit();const prev=caps()[0];const t=norm({...(prev?JSON.parse(JSON.stringify(prev)):{size:Math.round(cv.width*.055),color:'#ffffff',font:'Tajawal',weight:700,x:.5,y:.82,bg:true,bgColor:'rgba(0,0,0,.62)',shadow:0,ain:'fade',aout:'fade'}),id:uid(),text:'سطر جديد',start:+time.toFixed(2),dur:2,caption:true,kf:[],y:.82});P.texts.push(t);sel={k:'t',id:t.id};refresh();setTimeout(()=>{const ta=document.querySelector(`[data-ctx="${t.id}"]`);if(ta){ta.focus();ta.select();ta.scrollIntoView({block:'center'})}},50)};
+  $('#cMerge').onclick=()=>{const L2=caps(),i=L2.findIndex(t=>sel&&t.id===sel.id);if(i<0||i>=L2.length-1)return toast('اختر سطر عشان تدمجه مع اللي بعده');commit();const a=L2[i],b=L2[i+1];a.text=a.text+' '+b.text;a.dur=b.start+b.dur-a.start;P.texts.splice(P.texts.indexOf(b),1);refresh()};
+  $('#cClose').onclick=()=>{propsMode=null;sel=null;refresh()};
+  el.querySelectorAll('[data-cpre]').forEach(b=>b.onclick=()=>{commit();const pr=PRESETS[+b.dataset.cpre][1];caps().forEach(t=>Object.assign(t,pr));refresh();toast('تم تطبيق النمط على كل الأسطر')});
+  const cs=$('#cSize');if(cs){let c=0;cs.addEventListener('input',e=>{if(!c){commit();c=1}caps().forEach(t=>t.size=+e.target.value);$('#cSizeV').textContent=e.target.value})}
+  el.querySelectorAll('[data-cgo]').forEach(b=>b.onclick=()=>{const t=byId(b.dataset.cgo);pause();seek(t.start+.01);sel={k:'t',id:t.id};refresh()});
+  el.querySelectorAll('[data-cs],[data-ce]').forEach(inp=>inp.onchange=()=>{const t=byId(inp.dataset.cs||inp.dataset.ce),v=parseT(inp.value);if(isNaN(v)){toast('اكتب الوقت مثل 0:12.5');return refresh()}commit();
+    if(inp.dataset.cs){const end=t.start+t.dur;t.start=clamp(v,0,end-.2);t.dur=end-t.start}else t.dur=Math.max(.2,v-t.start);refresh()});
+  el.querySelectorAll('[data-cup],[data-cdn]').forEach(b=>b.onclick=()=>{commit();const t=byId(b.dataset.cup||b.dataset.cdn);t.y=b.dataset.cup?.15:.82;if(t.kf&&t.kf.length)t.kf.forEach(k=>k.y=t.y);refresh()});
+  el.querySelectorAll('[data-cdel]').forEach(b=>b.onclick=()=>{commit();const t=byId(b.dataset.cdel);P.texts.splice(P.texts.indexOf(t),1);if(sel&&sel.id===t.id)sel=null;refresh()});
+  el.querySelectorAll('[data-ctx]').forEach(ta=>{ta.addEventListener('focus',()=>{commit();sel={k:'t',id:ta.dataset.ctx};document.querySelectorAll('.cl.sel').forEach(c=>c.classList.remove('sel'));ta.closest('.cl').classList.add('sel')});ta.addEventListener('input',()=>{byId(ta.dataset.ctx).text=ta.value;renderTimeline()})});
+}
+let capTick=0;
+function capHighlight(){if(propsMode!=='caps'||performance.now()-capTick<200)return;capTick=performance.now();document.querySelectorAll('#cList .cl').forEach(c=>{const t=P.texts.find(x=>x.id===c.dataset.cid);c.classList.toggle('now',!!t&&time>=t.start&&time<t.start+t.dur)})}
+
 (async function init(){
-  $('#ratioTop').innerHTML=ratioBtns();
-  const ok=await restore();if(!ok)freshSample();
-  setRatio(P.ratio||'9:16',false);renderLib();refresh();
-  if(ok)toast('تم استرجاع مشروعك ✓');
-  if(document.fonts)FONTS.forEach(([f])=>document.fonts.load(`700 40px "${f}"`));
+  $('#ratioTop').innerHTML=ratioBtns();setRatio('9:16',false);renderLib();refresh();
   requestAnimationFrame(loop);
+  for(const f of await DB.all('fonts').catch(()=>[])){try{const ff=new FontFace(f.fam,f.buf.slice(0));await ff.load();document.fonts.add(ff);customFonts.push([f.fam,f.label,true])}catch(e){}}
+  await migrate().catch(()=>{});
+  showHome();
+  if(document.fonts)FONTS.forEach(([f])=>document.fonts.load(`700 40px "${f}"`));
 })();
 </script>
 
