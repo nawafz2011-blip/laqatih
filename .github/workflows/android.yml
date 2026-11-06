@@ -17,6 +17,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      # Keep Android's debug signing key between builds so each new APK installs as an update.
+      - name: Restore signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: laqta-debug-keystore-v1
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
@@ -49,6 +55,6 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: لقطة 1.0.${{ github.run_number }}
-          body: حمّل ملف laqta.apk وثبّته على جوال أندرويد (أندرويد 10 أو أحدث).
+          body_path: android/whatsnew.txt
           files: laqta.apk
           make_latest: true

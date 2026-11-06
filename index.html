@@ -189,6 +189,9 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .hero .nb{transition:transform .15s}.hero .nb:active{transform:scale(.96)}
 .tg button i{transition:transform .2s}.tg button:hover i{transform:translateY(-3px)}
 @media (prefers-reduced-motion:reduce){#splash,.spl *,#homeBody.anim>*{animation:none!important;transition:none!important}}
+.upd{background:var(--panel);border:1.5px solid var(--accent);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
+.upd b{font-size:15px}.upd small{color:var(--mute);line-height:1.7}.upd .bar{margin:0}
+.appad{display:block;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px;color:var(--text);text-decoration:none;font-weight:700}
 .ckl{display:flex;gap:8px;align-items:flex-start;text-align:right;margin-bottom:8px;line-height:1.6}
 .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .presets button{justify-content:center;font-size:15px;font-weight:700;padding:8px 0;background-color:var(--panel2)}
@@ -1291,6 +1294,32 @@ const TOOLS=[['cap','📝','كتابة تلقائية',1],['sil','🔇','حذف 
 const ago=t=>{const d=(Date.now()-t)/864e5;if(d<1&&new Date(t).getDate()===new Date().getDate())return 'اليوم';if(d<2)return 'أمس';return new Date(t).toLocaleDateString('ar-SA-u-nu-latn',{day:'numeric',month:'long'})};
 const splashT0=performance.now();
 function endSplash(){const sp=$('#splash');if(!sp)return;setTimeout(()=>{sp.classList.add('out');setTimeout(()=>sp.remove(),500)},Math.max(0,1300-(performance.now()-splashT0)))}
+/* ---------- app updates (Android app only) ---------- */
+const APK_URL='https://github.com/nawafz2011-blip/laqatih/releases/latest/download/laqta.apk';
+const inApp=()=>!!(window.LaqtaAndroid&&LaqtaAndroid.versionCode);
+let upd=null,updState=null,updP=0;
+function checkUpdate(){
+  if(!inApp())return;const cur=LaqtaAndroid.versionCode();
+  fetch('https://api.github.com/repos/nawafz2011-blip/laqatih/releases/latest',{cache:'no-store'}).then(r=>r.json()).then(r=>{
+    const n=+String(r.tag_name||'').split('.').pop();if(!n||n<=cur)return;
+    const a=(r.assets||[]).find(x=>/\.apk$/i.test(x.name));upd={n,url:a?a.browser_download_url:APK_URL,notes:String(r.body||'').split('\n')[0].slice(0,140)};updateBanner();
+  }).catch(()=>{});
+}
+window.laqtaUpdate=(st,p)=>{updState=st;if(p!=null)updP=p;updateBanner()};
+function updateBanner(){
+  const box=$('#updBox');if(!box)return;if(!upd){box.innerHTML='';return}
+  let body;
+  if(updState==='progress')body=`<div class="bar"><i style="width:${Math.max(3,updP)}%"></i></div><small>جاري تنزيل التحديث… ${updP}%</small>`;
+  else if(updState==='perm')body=`<small>فعّل «السماح من هذا المصدر» للقطة، وارجع للتطبيق. التثبيت يكمل لحاله.</small>`;
+  else if(updState==='install')body=`<small>اضغط «تحديث» في الشاشة اللي طلعت. لو طلع «التطبيق غير مثبّت»، احذف لقطة وثبّت الملف من التنزيلات.</small><div class="row"><button data-updgo>⬇ نزّله مرة ثانية</button></div>`;
+  else if(updState==='fail')body=`<small>ما قدرنا ننزّل التحديث. تأكد من النت وجرّب مرة ثانية.</small><div class="row"><button class="primary" data-updgo>⬇ جرّب مرة ثانية</button></div>`;
+  else body=`<small>${esc(upd.notes||'مزايا وتحسينات جديدة')}</small><div class="row"><button class="primary" data-updgo>⬇ تنزيل التحديث</button><button data-updlater>لاحقاً</button></div>`;
+  box.innerHTML=`<div class="upd"><b>🎉 فيه تحديث جديد · 1.0.${upd.n}</b>${body}</div>`;
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-updgo]')){updState='progress';updP=0;updateBanner();try{LaqtaAndroid.downloadUpdate(upd.url)}catch(_){updState='fail';updateBanner()}}
+  else if(e.target.closest('[data-updlater]')){upd=null;updateBanner()}
+});
 function showHome(){pause();saveProject();homeTab='home';menuFor=null;renderHome();$('#home').hidden=false}
 function hideHome(){$('#home').hidden=true}
 function pcard(p){return `<button class="rc" data-open="${p.id}"><i style="${p.thumb?`background-image:url('${p.thumb}')`:''}" class="r-${p.ratio.replace(':','-')}"><em>${fmt(p.dur||0,false)}</em></i><small>${esc(p.name)}</small></button>`}
@@ -1302,9 +1331,10 @@ function renderHome(){
   const el=$('#homeBody');el.classList.remove('anim');void el.offsetWidth;el.classList.add('anim');const _x=0,ps=[...projects].sort((a,b)=>b.updated-a.updated);
   document.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on',b.dataset.htab===homeTab));
   if(homeTab==='home'){
-    el.innerHTML=`<div class="hero"><span class="dc">✂</span><h2>وش بتسوي اليوم؟</h2><p>اختر فيديو من جهازك وابدأ على طول</p><div class="row"><button class="nb" id="hNew">＋ فيديو جديد</button>${ps.length?'':'<button class="nb2" id="hSample">جرّب مشروع مثال</button>'}</div></div>
+    el.innerHTML=`<div id="updBox"></div>${!inApp()&&/Android/i.test(navigator.userAgent)?`<a class="appad" href="${APK_URL}">📱 حمّل تطبيق لقطة للأندرويد</a>`:''}<div class="hero"><span class="dc">✂</span><h2>وش بتسوي اليوم؟</h2><p>اختر فيديو من جهازك وابدأ على طول</p><div class="row"><button class="nb" id="hNew">＋ فيديو جديد</button>${ps.length?'':'<button class="nb2" id="hSample">جرّب مشروع مثال</button>'}</div></div>
     ${ps.length?`<div class="hsec"><b>آخر المشاريع</b><button class="lnk" data-htab="projects">الكل ‹</button></div><div class="recent">${ps.slice(0,8).map(pcard).join('')}</div>`:''}
     <div class="hsec"><b>الأدوات</b></div><div class="tg">${TOOLS.map(([k,i,n,nw])=>`<button data-tool="${k}" class="${nw?'new':''}"><i>${i}</i>${n}</button>`).join('')}</div>`;
+    updateBanner();
   }else if(homeTab==='projects'){
     const f=ps.filter(p=>(!homeQ||p.name.includes(homeQ))&&(homeF==='all'||(homeF==='caps'?p.caps:p.ratio===homeF)));
     el.innerHTML=`<div class="hsec"><h1>المشاريع</h1><button class="primary" id="hNew">＋ جديد</button></div><input id="hQ" class="srch" placeholder="🔍 ابحث في المشاريع" value="${esc(homeQ)}">
@@ -1317,12 +1347,14 @@ function renderHome(){
     el.innerHTML=`<h1>الإعدادات</h1><div class="setr"><div><b>الوضع</b><small>ليلي أو صباحي</small></div><div class="seg"><button data-th="dark" class="${th==='dark'?'on':''}">☾ ليلي</button><button data-th="light" class="${th==='light'?'on':''}">☀ صباحي</button></div></div>
     <div class="setr"><div><b>الشرح التفاعلي</b><small>يوريك كل زر وش يسوي</small></div><button id="hTour">🎓 ابدأ الشرح</button></div>
     <div class="setr"><div><b>المشاريع المحفوظة</b><small>${projects.length} مشروع في هذا المتصفح</small></div></div>
+    <div class="setr"><div><b>الإصدار</b><small>${inApp()?'تطبيق أندرويد 1.0.'+LaqtaAndroid.versionCode():'الموقع يتحدّث تلقائياً'}</small></div>${inApp()?'<button id="hUpd">🔄 شيّك على التحديثات</button>':`<a class="appad" style="margin:0" href="${APK_URL}">📱 تطبيق الأندرويد</a>`}</div>
     <p class="hint">كل شي ينحفظ في هذا الجهاز بس. لو مسحت بيانات المتصفح تنحذف المشاريع.</p>`;
   }
 }
 $('#home').addEventListener('click',async e=>{
   const t=e.target.closest('button,[data-open]');if(!t)return;const d=t.dataset;
   if(d.htab){homeTab=d.htab;menuFor=null;renderHome();return}
+  if(t.id==='hUpd'){checkUpdate();homeTab='home';renderHome();setTimeout(()=>{if(!upd)toast('عندك آخر إصدار ✓')},2500);return}
   if(t.id==='hNew')return pickNew();
   if(t.id==='hSample')return createProject('مشروع مثال',true);
   if(t.id==='hTour'||d.tool==='tour'){const p=[...projects].sort((a,b)=>b.updated-a.updated)[0];if(p)await openProject(p.id);else await createProject('مشروع مثال',true);try{localStorage.removeItem('laqta-tour')}catch(_){}setTimeout(startTour,300);return}
@@ -1430,7 +1462,7 @@ function capHighlight(){if(propsMode!=='caps'||performance.now()-capTick<200)ret
   requestAnimationFrame(loop);
   for(const f of await DB.all('fonts').catch(()=>[])){try{const ff=new FontFace(f.fam,f.buf.slice(0));await ff.load();document.fonts.add(ff);customFonts.push([f.fam,f.label,true])}catch(e){}}
   await migrate().catch(()=>{});
-  showHome();endSplash();
+  showHome();endSplash();checkUpdate();
   if(document.fonts)FONTS.forEach(([f])=>document.fonts.load(`700 40px "${f}"`));
 })();
 </script>

@@ -2,6 +2,15 @@ package com.laqta.app;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
+import android.database.Cursor;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.content.ClipData;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -22,8 +31,10 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import androidx.core.content.FileProvider;
 import androidx.webkit.WebViewAssetLoader;
 
+import java.io.File;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
@@ -33,6 +44,81 @@ public class MainActivity extends Activity {
     private WebView web;
     private ValueCallback<Uri[]> fileCb;
     private PermissionRequest pendingPerm;
+
+    // In-app updates: download the new APK with DownloadManager, then hand it to the system installer.
+    private long dlId = -1;
+    private File pendingApk;
+    private boolean waitingInstallPerm = false;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final BroadcastReceiver dlDone = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) {
+            long id = i.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+            if (id == dlId && id != -1) {
+                dlId = -1;
+                installApk();
+            }
+        }
+    };
+
+    private void js(String code) {
+        runOnUiThread(() -> web.evaluateJavascript(code, null));
+    }
+
+    private void installApk() {
+        if (pendingApk == null || !pendingApk.exists() || pendingApk.length() == 0) {
+            js("window.laqtaUpdate&&laqtaUpdate('fail')");
+            return;
+        }
+        if (!getPackageManager().canRequestPackageInstalls()) {
+            waitingInstallPerm = true;
+            js("window.laqtaUpdate&&laqtaUpdate('perm')");
+            startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
+            return;
+        }
+        Uri u = FileProvider.getUriForFile(this, getPackageName() + ".files", pendingApk);
+        Intent i = new Intent(Intent.ACTION_VIEW);
+        i.setDataAndType(u, "application/vnd.android.package-archive");
+        i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(i);
+        js("window.laqtaUpdate&&laqtaUpdate('install')");
+    }
+
+    private void pollDownload() {
+        handler.postDelayed(() -> {
+            if (dlId < 0) return;
+            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            try (Cursor c = dm.query(new DownloadManager.Query().setFilterById(dlId))) {
+                if (c != null && c.moveToFirst()) {
+                    long so = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+                    long tot = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                    int st = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                    if (st == DownloadManager.STATUS_FAILED) {
+                        dlId = -1;
+                        js("window.laqtaUpdate&&laqtaUpdate('fail')");
+                        return;
+                    }
+                    if (tot > 0) js("window.laqtaUpdate&&laqtaUpdate('progress'," + (so * 100 / tot) + ")");
+                }
+            } catch (Exception ignored) { }
+            pollDownload();
+        }, 500);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (waitingInstallPerm && getPackageManager().canRequestPackageInstalls()) {
+            waitingInstallPerm = false;
+            installApk();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        try { unregisterReceiver(dlDone); } catch (Exception ignored) { }
+        super.onDestroy();
+    }
 
     @Override
     protected void onCreate(Bundle state) {
@@ -110,6 +196,10 @@ public class MainActivity extends Activity {
             }
         });
 
+        IntentFilter f = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(dlDone, f, Context.RECEIVER_EXPORTED);
+        else registerReceiver(dlDone, f);
+
         web.addJavascriptInterface(new Bridge(), "LaqtaAndroid");
         if (state != null) web.restoreState(state);
         else web.loadUrl("https://" + HOST + "/assets/index.html");
@@ -150,6 +240,36 @@ public class MainActivity extends Activity {
     /** Lets the page save an exported video to the gallery (Movies/Laqta) in chunks. */
     private class Bridge {
         private OutputStream out;
+
+        @JavascriptInterface
+        public int versionCode() {
+            try {
+                return (int) getPackageManager().getPackageInfo(getPackageName(), 0).getLongVersionCode();
+            } catch (Exception e) {
+                return 0;
+            }
+        }
+
+        @JavascriptInterface
+        public void downloadUpdate(String url) {
+            runOnUiThread(() -> {
+                try {
+                    File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                    pendingApk = new File(dir, "laqta-update.apk");
+                    if (pendingApk.exists()) pendingApk.delete();
+                    DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
+                    r.setTitle("تحديث لقطة");
+                    r.setMimeType("application/vnd.android.package-archive");
+                    r.setDestinationUri(Uri.fromFile(pendingApk));
+                    r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+                    DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                    dlId = dm.enqueue(r);
+                    pollDownload();
+                } catch (Exception e) {
+                    js("window.laqtaUpdate&&laqtaUpdate('fail')");
+                }
+            });
+        }
 
         @JavascriptInterface
         public boolean begin(String name, String mime) {
