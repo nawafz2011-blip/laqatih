@@ -449,9 +449,12 @@ function setVoice(o,v){
   o.srcNode.connect(b.input);b.output.connect(o.gain);o.fxNodes=b.nodes;o.voiceCur=v;
 }
 function pause(){playing=false;$('#play').textContent='▶';for(const o of players())if(!o.el.paused)o.el.pause()}
-function seek(t){time=clamp(t,0,Math.max(0,total()));if(playing)t0=performance.now()-time*1000}
+let userSeek=false,waitT=0;
+function seek(t){time=clamp(t,0,Math.max(0,total()));userSeek=true;if(playing)t0=performance.now()-time*1000}
+let masterEl=null;
 function sync(){
-  const want=new Map(),mc=activeMain(time);
+  const want=new Map(),mc=activeMain(time);masterEl=mc&&media.get(mc.mid)&&media.get(mc.mid).type==='video'?media.get(mc.mid):null;
+  if(userSeek){if(!masterEl||(!masterEl.el.seeking&&Math.abs(masterEl.el.currentTime-mtime(mc,time-mc._s))<.3))userSeek=false}
   if(mc){const m=media.get(mc.mid);if(m&&m.type==='video')want.set(m,{t:mtime(mc,time-mc._s),vol:mc.vol,rate:mc.speed||1,voice:mc.voice})}
   for(const o of P.overlays){const m=media.get(o.mid);if(m&&m.type==='video'&&time>=o.start&&time<o.start+dur(o))want.set(oPlayer(o),{t:mtime(o,time-o.start),vol:o.vol,rate:o.speed||1,voice:o.voice})}
   for(const a of P.audios){if(time>=a.start&&time<a.start+dur(a)&&media.get(a.mid)){const o=aPlayer(a),lt=time-a.start,e=a.start+dur(a)-time;let v=a.vol;if(a.fin>0)v*=Math.min(1,lt/a.fin);if(a.fout>0)v*=Math.min(1,e/a.fout);want.set(o,{t:mtime(a,lt),vol:v,rate:a.speed||1,voice:a.voice})}}
@@ -461,7 +464,7 @@ function sync(){
     if(m.gain)m.gain.gain.value=w.vol;else el.volume=clamp(w.vol,0,1);
     if(el.playbackRate!==w.rate)el.playbackRate=w.rate;
     if(m.srcNode)setVoice(m,w.voice||'none');
-    if(playing){if(!el.seeking&&Math.abs(el.currentTime-w.t)>0.3)el.currentTime=w.t;if(el.paused)el.play().catch(()=>{})}
+    if(playing){const tol=m===masterEl?.6:.35;if(!el.seeking&&Math.abs(el.currentTime-w.t)>tol)el.currentTime=w.t;if(el.paused)el.play().catch(()=>{})}
     else{if(!el.paused)el.pause();if(!el.seeking&&Math.abs(el.currentTime-w.t)>0.04)el.currentTime=w.t}
   }
 }
@@ -730,7 +733,16 @@ function fxPost(c,W,H){
 function addOverlay(m){if(!m||m.type==='audio')return;commit();const o={id:uid(),mid:m.id,start:+time.toFixed(2),in:0,out:m.duration,vol:1,x:.5,y:.5,scale:.45,rot:0,opacity:1,kf:[]};P.overlays.push(o);sel={k:'o',id:o.id};closeSheets();refresh();toast('تمت إضافة الطبقة. اسحبها في المعاينة عشان تحركها')}
 function roundRect(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 function loop(now){
-  if(playing){time=(now-t0)/1000;const T=total();if(time>=T){time=T;if(exporting)finishExport();else pause()}}
+  if(playing){
+    // The active video is the clock: when it stalls (seeking, buffering) the project waits for it
+    // instead of racing ahead and forcing another seek, which is what made long videos stutter.
+    const mc=activeMain(time),mv=mc&&media.get(mc.mid),el=mv&&mv.type==='video'?mv.el:null;
+    if(el&&!userSeek){
+      const ready=!el.paused&&!el.seeking&&el.readyState>=3;
+      if(ready){waitT=0;const vt=mc._s+(el.currentTime-mc.in)/(mc.speed||1);time=Math.abs(vt-time)<1?Math.max(time,vt):(now-t0)/1000;t0=now-time*1000}
+      else{if(!waitT)waitT=now;if(now-waitT<1500)t0=now-time*1000;else time=(now-t0)/1000}
+    }else time=(now-t0)/1000;
+    const T=total();if(time>=T){time=T;if(exporting)finishExport();else pause()}}
   sync();draw();
   const T=total();$('#tc').innerHTML=`<b>${fmt(time)}</b> / ${fmt(T)}`;
   if(exporting){const p=T?time/T:1;const b=$('#expBar');if(b)b.style.width=(p*100).toFixed(1)+'%';const s=$('#expPct');if(s)s.textContent=Math.round(p*100)+'%'}
