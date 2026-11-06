@@ -608,7 +608,7 @@ async function runAsr(c,kind,m,model){
     hideOv();refresh();toast(`تمت إضافة ${chunks.length} سطر. راجعها وعدّل أي كلمة`);
   }catch(e){
     msg('ما قدرنا نشغّل الكتابة التلقائية هنا. تشتغل على موقع GitHub وتطبيق الأندرويد، وتحتاج إنترنت أول مرة عشان يتحمّل الموديل.');
-    $('#ovCard').insertAdjacentHTML('beforeend','<div class="row"><button id="asrX">رجوع</button></div>');$('#asrX').onclick=hideOv;
+    $('#ovCard').insertAdjacentHTML('beforeend',`<p class="hint" style="direction:ltr;font-family:var(--mono);font-size:11px;word-break:break-word">${esc(String(e&&e.message||e).slice(0,300))}</p><div class="row"><button id="asrX">رجوع</button></div>`);$('#asrX').onclick=hideOv;
   }
 }
 const PRESETS=[
