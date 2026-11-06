@@ -583,7 +583,22 @@ async function silencePanel(s,kind){
     arr.splice(i,1,...parts);sel={k:kind,id:parts[0].id};refresh();toast(`تم حذف الصمت ووفّرنا ${saved.toFixed(1)} ثانية`)};
 }
 /* ---------- auto captions (Whisper in the browser) ---------- */
-let asrPipe=null,asrModel=null;
+let asrWorker=null,asrJob=null;
+const ASR_WORKER=`let pipe=null,cur=null;
+const SR=16000;
+function cutPoint(a,i,L){const end=Math.min(a.length,i+L);if(end>=a.length)return end;const from=end-6*SR,W=320;let best=end,bv=1e9;
+  for(let p=from;p<end-W;p+=W){let e=0;for(let j=p;j<p+W;j+=4)e+=a[j]*a[j];if(e<bv){bv=e;best=p+W/2}}return Math.floor(best)}
+self.onmessage=async e=>{const {model,audio}=e.data;try{
+  const T=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2');T.env.allowLocalModels=false;
+  if(!pipe||cur!==model){const prog=p=>{if(p.status==='progress'&&p.total)postMessage({type:'dl',p:p.progress})};
+    let dev='wasm';try{if(self.navigator&&navigator.gpu&&await navigator.gpu.requestAdapter())dev='webgpu'}catch(_){}
+    try{pipe=await T.pipeline('automatic-speech-recognition',model,{device:dev,dtype:dev==='webgpu'?{encoder_model:'fp32',decoder_model_merged:'q4'}:'q8',progress_callback:prog})}
+    catch(err){if(dev==='wasm')throw err;pipe=await T.pipeline('automatic-speech-recognition',model,{device:'wasm',dtype:'q8',progress_callback:prog})}
+    cur=model;postMessage({type:'ready',dev})}
+  let i=0;while(i<audio.length){const j=cutPoint(audio,i,30*SR),part=audio.subarray(i,j),off=i/SR;
+    const out=await pipe(part,{language:'arabic',task:'transcribe',return_timestamps:true});
+    postMessage({type:'chunk',done:j/audio.length,chunks:(out.chunks||[]).map(c=>({text:c.text,s:c.timestamp[0]+off,e:(c.timestamp[1]??c.timestamp[0]+2)+off}))});i=j}
+  postMessage({type:'end'})}catch(err){postMessage({type:'err',msg:String(err&&err.message||err)})}};`;
 function autoCaption(c,kind){
   const m=media.get(c.mid);if(!m||!m.file)return toast('ما لقينا صوت في هذا المقطع');
   let model='onnx-community/whisper-base';
@@ -594,25 +609,31 @@ function autoCaption(c,kind){
   $('#asrX').onclick=hideOv;$('#asrGo').onclick=()=>runAsr(c,kind,m,model);
 }
 async function runAsr(c,kind,m,model){
-  showOv(`<h2>📝 كتابة تلقائية</h2><div class="bar"><i id="asrBar" style="width:3%"></i></div><p id="asrMsg">جاري تجهيز الموديل…</p>`);
+  showOv(`<h2>📝 كتابة تلقائية</h2><div class="bar"><i id="asrBar" style="width:3%"></i></div><p id="asrMsg">جاري تجهيز الصوت…</p><div class="row"><button id="asrStop">إيقاف</button></div>`);
   const msg=t=>{const e=$('#asrMsg');if(e)e.textContent=t},bar=v=>{const e=$('#asrBar');if(e)e.style.width=v+'%'};
-  try{
-    const T=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2');T.env.allowLocalModels=false;
-    if(!asrPipe||asrModel!==model){asrPipe=await T.pipeline('automatic-speech-recognition',model,{progress_callback:p=>{if(p.status==='progress'&&p.total){bar(Math.max(3,p.progress*.8));msg('تحميل الموديل… '+Math.round(p.progress)+'%')}}});asrModel=model}
-    bar(85);msg('جاري سماع الكلام وكتابته… ممكن ياخذ دقيقة');
-    const ab=await new OfflineAudioContext(1,1,16000).decodeAudioData(await m.file.arrayBuffer());
-    const d=ab.getChannelData(0),audio=d.slice(Math.floor(c.in*16000),Math.min(d.length,Math.floor(c.out*16000)));
-    const out=await asrPipe(audio,{language:'arabic',task:'transcribe',return_timestamps:true,chunk_length_s:30,stride_length_s:5});
-    const chunks=(out.chunks||[]).filter(x=>x.text&&x.text.trim());
-    if(!chunks.length){msg('ما لقينا كلام واضح في هذا المقطع.');$('#ovCard').insertAdjacentHTML('beforeend','<div class="row"><button id="asrX">رجوع</button></div>');$('#asrX').onclick=hideOv;return}
-    commit();const base=itemStart(kind,c),sp=c.speed||1;
-    for(const ch of chunks){let [s0,e0]=ch.timestamp;if(e0==null)e0=s0+2;
-      P.texts.push(norm({id:uid(),text:ch.text.trim(),start:+(base+s0/sp).toFixed(2),dur:+Math.max(.4,(e0-s0)/sp).toFixed(2),size:Math.round(cv.width*.055),color:'#ffffff',font:'Tajawal',weight:700,x:.5,y:.82,bg:true,bgColor:'rgba(0,0,0,.62)',shadow:0,ain:'fade',aout:'fade',caption:true}))}
-    hideOv();refresh();toast(`تمت إضافة ${chunks.length} سطر. راجعها وعدّل أي كلمة`);
-  }catch(e){
-    msg('ما قدرنا نشغّل الكتابة التلقائية هنا. تشتغل على موقع GitHub وتطبيق الأندرويد، وتحتاج إنترنت أول مرة عشان يتحمّل الموديل.');
-    $('#ovCard').insertAdjacentHTML('beforeend',`<p class="hint" style="direction:ltr;font-family:var(--mono);font-size:11px;word-break:break-word">${esc(String(e&&e.message||e).slice(0,300))}</p><div class="row"><button id="asrX">رجوع</button></div>`);$('#asrX').onclick=hideOv;
-  }
+  const fail=t=>{msg('ما قدرنا نكمل الكتابة التلقائية. تشتغل على موقع GitHub وتطبيق الأندرويد، وتحتاج إنترنت أول مرة عشان يتحمّل الموديل.');
+    const st=$('#asrStop');if(st)st.remove();$('#ovCard').insertAdjacentHTML('beforeend',`<p class="hint" style="direction:ltr;font-family:var(--mono);font-size:11px;word-break:break-word">${esc(String(t).slice(0,300))}</p><div class="row"><button id="asrX">رجوع</button></div>`);$('#asrX').onclick=hideOv};
+  let audio;
+  try{const ab=await new OfflineAudioContext(1,1,16000).decodeAudioData(await m.file.arrayBuffer());const d=ab.getChannelData(0);audio=d.slice(Math.floor(c.in*16000),Math.min(d.length,Math.floor(c.out*16000)))}
+  catch(e){return fail(e&&e.message||e)}
+  const mins=(audio.length/16000/60).toFixed(1),base=itemStart(kind,c),sp=c.speed||1;let added=0,committed=false;
+  try{if(!asrWorker)asrWorker=new Worker(URL.createObjectURL(new Blob([ASR_WORKER],{type:'text/javascript'})),{type:'module'})}catch(e){return fail(e&&e.message||e)}
+  const finish=()=>{asrJob=null;hideOv();refresh();toast(added?`تمت إضافة ${added} سطر. راجعها وعدّل أي كلمة`:'ما لقينا كلام واضح في هذا المقطع')};
+  $('#asrStop').onclick=()=>{if(asrWorker){asrWorker.terminate();asrWorker=null}finish()};
+  asrJob=true;
+  asrWorker.onmessage=e=>{const d=e.data;
+    if(d.type==='dl'){bar(Math.max(3,d.p*.3));msg('تحميل الموديل… '+Math.round(d.p)+'%')}
+    else if(d.type==='ready'){bar(30);msg(`جاري سماع الكلام (${mins} دقيقة)… ${d.dev==='webgpu'?'باستخدام كرت الشاشة':'ممكن ياخذ عدة دقائق'}`)}
+    else if(d.type==='chunk'){
+      const list=d.chunks.filter(x=>x.text&&x.text.trim());
+      if(list.length&&!committed){commit();committed=true}
+      for(const ch of list){P.texts.push(norm({id:uid(),text:ch.text.trim(),start:+(base+ch.s/sp).toFixed(2),dur:+Math.max(.4,(ch.e-ch.s)/sp).toFixed(2),size:Math.round(cv.width*.055),color:'#ffffff',font:'Tajawal',weight:700,x:.5,y:.82,bg:true,bgColor:'rgba(0,0,0,.62)',shadow:0,ain:'fade',aout:'fade',caption:true}));added++}
+      renderTimeline();bar(30+d.done*70);msg(`كتبنا ${Math.round(d.done*100)}% · ${added} سطر لين الحين`)}
+    else if(d.type==='end')finish();
+    else if(d.type==='err'){asrWorker.terminate();asrWorker=null;if(added)finish();else fail(d.msg)}
+  };
+  asrWorker.onerror=e=>{if(asrWorker){asrWorker.terminate();asrWorker=null}fail(e.message||'worker error')};
+  asrWorker.postMessage({model,audio},[audio.buffer]);
 }
 const PRESETS=[
   ['عنوان',{font:'Cairo',weight:800,color:'#ffffff',stroke:0,shadow:.6,glow:false,bg:false}],
