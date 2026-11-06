@@ -923,11 +923,17 @@ async function startExport(){
     showOv(`<h2>الفيديو جاهز ✓</h2><video src="${url}" controls playsinline></video><p>${ext.toUpperCase()} · ${(blob.size/1048576).toFixed(1)} MB</p><div class="row"><button class="primary" id="saveV">⬇ حفظ الفيديو</button><button id="closeV">رجوع للتحرير</button></div>`);
     $('#closeV').onclick=()=>{hideOv();URL.revokeObjectURL(url)};
     $('#saveV').onclick=async()=>{
-      if(dl){try{await dl.save({filename:name,data:blob});toast('تم الحفظ')}catch(e){if(e&&e.code!=='declined')toast('ما قدرنا نحفظ الملف هنا')}}
+      if(window.LaqtaAndroid){const b=$('#saveV');b.disabled=true;b.textContent='جاري الحفظ…';try{await saveAndroid(blob,name);toast('انحفظ الفيديو في المعرض ✓')}catch(e){toast('ما قدرنا نحفظ الفيديو')}b.disabled=false;b.textContent='⬇ حفظ الفيديو'}
+      else if(dl){try{await dl.save({filename:name,data:blob});toast('تم الحفظ')}catch(e){if(e&&e.code!=='declined')toast('ما قدرنا نحفظ الملف هنا')}}
       else{const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()}
     };refresh();
   };
   rec.start(250);play();
+}
+async function saveAndroid(blob,name){ // inside the Android app: stream the file to the gallery in base64 chunks
+  const A=window.LaqtaAndroid,CH=3<<20;if(!A.begin(name,(blob.type||'video/mp4').split(';')[0]))throw 0;
+  for(let o=0;o<blob.size;o+=CH){const u=new Uint8Array(await blob.slice(o,o+CH).arrayBuffer());let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));if(!A.chunk(btoa(s)))throw 0}
+  if(!A.end())throw 0;
 }
 function finishExport(){if(!exporting||exporting.stopping)return;exporting.stopping=true;pause();try{exporting.rec.stop()}catch(e){}}
 $('#exportBtn').onclick=startExport;
