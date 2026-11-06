@@ -106,7 +106,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .kd{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;background:#ffd36e;border:1.5px solid #222;transform:rotate(45deg);z-index:4;cursor:pointer}
 .kd.on{background:#fff;box-shadow:0 0 0 2px var(--accent)}
 h4.sec{font-size:12.5px;margin:18px 0 8px}
-.trb{position:absolute;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:6px;padding:0;justify-content:center;font-size:11px;z-index:4;background:var(--panel);color:var(--mute)}
+.trb{position:absolute;top:50%;width:24px;height:24px;margin:-12px 0 0 -1px;border-radius:7px;padding:0;justify-content:center;font-size:12px;z-index:4;background:var(--panel);color:var(--text);border:1.5px solid var(--accent)}
+.clip .vw{position:absolute;left:0;right:0;bottom:0;height:42%;background-color:#0f3b33cc;background-repeat:no-repeat;pointer-events:none;border-top:1px solid #22d3a644}.clip .vw.mute{opacity:.3}
 .trb.has{background:var(--accent);color:#fff;border-color:var(--accent)}.trb.on{outline:2px solid var(--ph)}
 .tgrid,.flgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
 .tgrid button,.flgrid button{flex-direction:column;gap:4px;padding:5px 2px;font-size:10.5px;border-radius:9px;min-width:0;justify-content:center}
@@ -114,10 +115,12 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .flgrid span{width:100%;aspect-ratio:1;border-radius:6px;background:#556 center/cover}
 .tp{width:100%;aspect-ratio:1.4;border-radius:5px;background:linear-gradient(90deg,#f6a35b 50%,#5ac8fa 50%)}
 .tp-none{background:linear-gradient(90deg,#f6a35b 50%,#5ac8fa 50%)}.tp-fade{background:linear-gradient(90deg,#f6a35b,#5ac8fa)}.tp-black{background:linear-gradient(90deg,#f6a35b,#000,#5ac8fa)}.tp-white{background:linear-gradient(90deg,#f6a35b,#fff,#5ac8fa)}
-.tp-slideL{background:linear-gradient(90deg,#f6a35b 30%,#5ac8fa 30%)}.tp-slideR{background:linear-gradient(90deg,#5ac8fa 70%,#f6a35b 70%)}.tp-zoom{background:radial-gradient(#f6a35b 30%,#5ac8fa 31%)}.tp-blur{background:linear-gradient(90deg,#f6a35b,#5ac8fa);filter:blur(2px)}
+.tp-slideL{background:linear-gradient(90deg,#f6a35b 30%,#5ac8fa 30%)}.tp-slideR{background:linear-gradient(90deg,#5ac8fa 70%,#f6a35b 70%)}.tp-zoom{background:radial-gradient(#f6a35b 30%,#5ac8fa 31%)}.tp-slideU{background:linear-gradient(180deg,#f6a35b 30%,#5ac8fa 30%)}.tp-slideD{background:linear-gradient(180deg,#5ac8fa 70%,#f6a35b 70%)}.tp-wipeL{background:linear-gradient(90deg,#f6a35b 45%,#fff 45%,#fff 50%,#5ac8fa 50%)}.tp-wipeR{background:linear-gradient(90deg,#5ac8fa 50%,#fff 50%,#fff 55%,#f6a35b 55%)}.tp-circle{background:radial-gradient(circle,#5ac8fa 35%,#f6a35b 36%)}.tp-spin{background:conic-gradient(#f6a35b 0 25%,#5ac8fa 0 50%,#f6a35b 0 75%,#5ac8fa 0)}.tp-shake{background:repeating-linear-gradient(90deg,#f6a35b 0 6px,#5ac8fa 6px 12px)}
+.tp-blur{background:linear-gradient(90deg,#f6a35b,#5ac8fa);filter:blur(2px)}
 .stk{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
 .stk button{font-size:24px;justify-content:center;padding:6px 0;border-radius:10px}
 #pSp{margin:8px 0 4px}
+.slviz{display:block;width:100%;height:60px;background:var(--panel2);border-radius:8px;border:1px solid var(--line)}
 .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .presets button{justify-content:center;font-size:15px;font-weight:700;padding:8px 0;background-color:var(--panel2)}
 .hint{color:var(--mute);line-height:1.8}
@@ -313,7 +316,7 @@ async function makeMedia(f,extra={}){
     const ok=await new Promise(r=>{el.onloadedmetadata=()=>r(true);el.onerror=()=>r(false)});
     if(!ok){toast('ما قدرنا نفتح الملف: '+f.name);return null}
     m.el=el;m.duration=isFinite(el.duration)&&el.duration>0?el.duration:(extra.duration||0);
-    if(type==='video'){m.thumb=await thumbOf(el);hook(m)}else m.wave=await waveOf(f,m.duration);
+    if(type==='video'){m.thumb=await thumbOf(el);hook(m);if(f.size<400e6)m.wave=await waveOf(f,m.duration)}else m.wave=await waveOf(f,m.duration);
   }
   return m;
 }
@@ -375,7 +378,7 @@ async function previewSound(key,btn){
 async function extractAudio(c){
   const m=media.get(c.mid);if(!m||m.type!=='video')return;
   let am=m.audioMedia&&media.get(m.audioMedia);
-  if(!am){toast('جاري استخراج الصوت…');am={id:uid(),type:'audio',name:'صوت '+m.name,url:m.url,duration:m.duration,wave:await waveOf(m.file,m.duration),lib:true,srcOf:m.id};media.set(am.id,am);m.audioMedia=am.id;persistMedia(am)}
+  if(!am){toast('جاري استخراج الصوت…');am={id:uid(),type:'audio',name:'صوت '+m.name,url:m.url,file:m.file,duration:m.duration,wave:m.wave||await waveOf(m.file,m.duration),lib:true,srcOf:m.id};media.set(am.id,am);m.audioMedia=am.id;persistMedia(am)}
   commit();layout();const a={id:uid(),mid:am.id,start:c._s,in:c.in,out:c.out,vol:c.vol||1,fin:0,fout:0,speed:c.speed||1};P.audios.push(a);c.vol=0;sel={k:'a',id:a.id};
   refresh();toast(am.wave?'تم استخراج الصوت وكتم صوت الفيديو الأصلي':'ما لقينا صوت واضح في هذا الفيديو');
 }
@@ -499,6 +502,40 @@ function anim(t){
   }
   return r;
 }
+/* ---------- silence removal ---------- */
+let silThr=-40,silMin=.4;const silPad=.08;
+async function getRms(m){
+  if(m.rms)return m.rms;if(!m.file)return null;
+  try{const ab=await new OfflineAudioContext(1,1,44100).decodeAudioData(await m.file.arrayBuffer());
+    const sr=ab.sampleRate,win=Math.round(sr*.02),n=Math.floor(ab.length/win),db=new Float32Array(n),ch=[...Array(ab.numberOfChannels)].map((_,i)=>ab.getChannelData(i));
+    for(let i=0;i<n;i++){let s=0,c=0;for(const d of ch)for(let j=i*win;j<(i+1)*win;j+=2){s+=d[j]*d[j];c++}db[i]=10*Math.log10(s/c+1e-12)}
+    return m.rms={db,step:.02};
+  }catch(e){return m.rms={db:null}}
+}
+function keepSegs(rms,a,b){
+  const st=rms.step,sil=[];let rs=null;
+  for(let i=Math.floor(a/st);i*st<b;i++){const t=Math.max(a,i*st),q=(rms.db[i]??-120)<silThr;if(q&&rs===null)rs=t;if(!q&&rs!==null){sil.push([rs,t]);rs=null}}
+  if(rs!==null)sil.push([rs,b]);
+  const cuts=sil.filter(([x,y])=>y-x>=silMin).map(([x,y])=>[x<=a+1e-6?a:x+silPad,y>=b-1e-6?b:y-silPad]).filter(([x,y])=>y-x>.05);
+  const keep=[];let p=a;for(const [x,y] of cuts){if(x-p>.05)keep.push([p,x]);p=y}if(b-p>.05)keep.push([p,b]);return keep;
+}
+async function silencePanel(s,kind){
+  const m=media.get(s.mid),info=$('#slInfo'),cvz=$('#slViz');if(!info)return;
+  const rms=await getRms(m);if(!$('#slInfo'))return;
+  if(!rms||!rms.db){info.textContent='ما لقينا صوت في هذا المقطع.';$('#slGo').disabled=true;return}
+  const a=s.in,b=s.out,keep=keepSegs(rms,a,b),kept=keep.reduce((t,[x,y])=>t+y-x,0),sp=s.speed||1,saved=(b-a-kept)/sp;
+  const x=cvz.getContext('2d'),W=cvz.width=cvz.clientWidth*2,H=cvz.height=120,cs=getComputedStyle(document.documentElement);
+  x.clearRect(0,0,W,H);const ty=v=>H-(clamp(v,-80,0)+80)/80*H;
+  x.fillStyle='rgba(255,92,138,.22)';let p=a;for(const [k0,k1] of [...keep,[b,b]]){if(k0>p)x.fillRect((p-a)/(b-a)*W,0,(k0-p)/(b-a)*W,H);p=k1}
+  x.fillStyle=cs.getPropertyValue('--accent2');const st=rms.step;for(let px=0;px<W;px+=2){const t=a+(b-a)*px/W,v=rms.db[Math.floor(t/st)]??-120;x.fillRect(px,ty(v),1.5,H-ty(v))}
+  x.strokeStyle='#ff5c8a';x.lineWidth=2;x.setLineDash([6,4]);x.beginPath();x.moveTo(0,ty(silThr));x.lineTo(W,ty(silThr));x.stroke();
+  const cutsN=Math.max(0,keep.length-1)+(keep.length&&keep[0][0]>a+.01?1:0)+(keep.length&&keep[keep.length-1][1]<b-.01?1:0);
+  info.textContent=keep.length?(saved>.05?`بيحذف ${cutsN} جزء هادي ويوفّر ${saved.toFixed(1)} ثانية. الأجزاء الحمراء هي اللي بتنحذف.`:'ما فيه أجزاء أهدى من الحد. جرّب ترفع الحد.'):'كل المقطع أهدى من الحد. نزّل الحد شوي.';
+  $('#slGo').disabled=!(keep.length&&saved>.05);
+  $('#slGo').onclick=()=>{commit();const arr=list(kind),i=arr.indexOf(s);let st0=kind==='a'?s.start:0;
+    const parts=keep.map(([k0,k1],j)=>{const n={...JSON.parse(JSON.stringify(s)),id:uid(),in:k0,out:k1,kf:[]};delete n.tr;if(j===keep.length-1&&s.tr)n.tr=s.tr;if(kind==='a'){n.start=st0;st0+=(k1-k0)/sp}return n});
+    arr.splice(i,1,...parts);sel={k:kind,id:parts[0].id};refresh();toast(`تم حذف الصمت ووفّرنا ${saved.toFixed(1)} ثانية`)};
+}
 const PRESETS=[
   ['عنوان',{font:'Cairo',weight:800,color:'#ffffff',stroke:0,shadow:.6,glow:false,bg:false}],
   ['ترجمة',{font:'Tajawal',weight:700,color:'#ffffff',stroke:0,shadow:0,glow:false,bg:true,bgColor:'rgba(0,0,0,.62)'}],
@@ -565,12 +602,17 @@ function drawTransitions(mc,W,H){
     else if(q<d&&snap.id===prev.id){const p=eo(q/d);g.save();
       if(T==='fade')g.globalAlpha=1-p;else if(T==='slideL')g.translate(-p*W,0);else if(T==='slideR')g.translate(p*W,0);
       else if(T==='zoom'){g.translate(W/2,H/2);g.scale(1+p*.6,1+p*.6);g.translate(-W/2,-H/2);g.globalAlpha=1-p}else if(T==='blur'){g.filter=`blur(${p*30}px)`;g.globalAlpha=1-p}
+      else if(T==='slideU')g.translate(0,-p*H);else if(T==='slideD')g.translate(0,p*H);
+      else if(T==='wipeL'){g.beginPath();g.rect(0,0,W*(1-p),H);g.clip()}else if(T==='wipeR'){g.beginPath();g.rect(W*p,0,W*(1-p),H);g.clip()}
+      else if(T==='circle'){g.beginPath();g.rect(0,0,W,H);g.arc(W/2,H/2,p*Math.hypot(W,H)/2,0,7);g.clip('evenodd')}
+      else if(T==='spin'){g.translate(W/2,H/2);g.rotate(p*Math.PI);g.scale(1-p,1-p);g.translate(-W/2,-H/2);g.globalAlpha=1-p}
+      else if(T==='shake'){g.translate((Math.random()-.5)*60*(1-p),(Math.random()-.5)*30*(1-p));g.globalAlpha=1-p}
       g.drawImage(snapC,0,0);g.restore()}}
   if(nx&&mc.tr&&(mc.tr.type==='black'||mc.tr.type==='white')){const d=trD(mc);if(rem<d/2)dip(mc.tr.type,1-rem/(d/2),W,H)}
 }
 const FILTERS=[['none','بدون',''],['bw','أبيض وأسود','grayscale(1) contrast(1.1)'],['warm','دافئ','sepia(.3) saturate(1.3) brightness(1.03)'],['cool','بارد','saturate(.85) hue-rotate(-12deg) brightness(1.05)'],['vivid','حيوي','saturate(1.6) contrast(1.1)'],['vintage','قديم','sepia(.55) contrast(1.1) brightness(.95)'],['fade','باهت','contrast(.8) saturate(.75) brightness(1.12)'],['drama','دراما','contrast(1.45) saturate(.85) brightness(.9)'],['dream','حالم','blur(1.5px) saturate(1.25) brightness(1.08)']];
 function filterStr(c){const f=(FILTERS.find(x=>x[0]===c.filter)||FILTERS[0])[2],a=c.adj||{};const s=`${f} brightness(${a.b??1}) contrast(${a.c??1}) saturate(${a.s??1})`.trim();return s==='brightness(1) contrast(1) saturate(1)'?'none':s}
-const TRANS=[['none','بدون'],['fade','تلاشي'],['black','أسود'],['white','وميض'],['slideL','انزلاق ←'],['slideR','انزلاق →'],['zoom','تكبير'],['blur','ضبابي']];
+const TRANS=[['none','بدون'],['fade','تلاشي'],['black','أسود'],['white','وميض'],['slideL','انزلاق ←'],['slideR','انزلاق →'],['zoom','تكبير'],['blur','ضبابي'],['slideU','انزلاق ↑'],['slideD','انزلاق ↓'],['wipeL','مسح ←'],['wipeR','مسح →'],['circle','دائرة'],['spin','دوران'],['shake','اهتزاز']];
 function trD(a){const b=P.main[P.main.indexOf(a)+1];return Math.min(a.tr.d,dur(a)*.9,b?dur(b)*.9:9)}
 const STICKERS=['😂','😍','🔥','✨','❤️','👍','🎉','😎','🤩','😮','💯','⭐','🌙','☀️','🌸','🎵','📍','✅','❌','👀','🙏','💪','🥳','😢','⚡','🌈','🍃','☕','🎬','📸','🎁','🕋'];
 function addSticker(em){commit();const t=norm({id:uid(),text:em,sticker:true,start:+time.toFixed(2),dur:3,size:Math.round(cv.width*.2),color:'#ffffff',font:'Cairo',x:.5,y:.5,bg:false,shadow:.3,ain:'pop',aout:'zoom'});P.texts.push(t);sel={k:'t',id:t.id};closeSheets();refresh();toast('تمت إضافة الستيكر')}
@@ -618,7 +660,7 @@ function split(){
   if(k==='m'){const at=mtime(s,time-s._s);if(at-s.in<.05||s.out-at<.05)return;commit();const n={...s,id:uid(),in:at,kf:cpk(time-s._s)};s.out=at;arr.splice(i+1,0,n);sel={k,id:n.id}}
   else if(k==='t'){const at=time-s.start;if(at<.05||s.dur-at<.05)return;commit();const n={...s,id:uid(),start:time,dur:s.dur-at,kf:cpk(at)};s.dur=at;arr.splice(i+1,0,n);sel={k,id:n.id}}
   else{const at=mtime(s,time-s.start);if(at-s.in<.05||s.out-at<.05)return;commit();const n={...s,id:uid(),in:at,start:time};s.out=at;arr.splice(i+1,0,n);sel={k,id:n.id}}
-  refresh();toast('تم التقسيم');
+  refresh();toast(k==='m'?'تم التقسيم. اضغط ⇄ بين المقطعين عشان تضيف انتقال':'تم التقسيم');
 }
 function hitsTime(k,s){if(k==='m')return time>=s._s&&time<s._s+dur(s);if(k==='t')return time>=s.start&&time<s.start+s.dur;return time>=s.start&&time<s.start+dur(s)}
 function del(){const s=getSel();if(!s)return;commit();if(sel.k==='tr'){delete s.tr;refresh();return}const a=list(sel.k);a.splice(a.indexOf(s),1);sel=null;seek(time);refresh()}
@@ -635,11 +677,11 @@ function renderTimeline(){
   const cls=(k,id)=>sel&&sel.k===k&&sel.id===id?' sel':'';
   const hd='<i class="h l"></i><i class="h r"></i>';
   const kd=(it,k)=>(it.kf||[]).map((f,i)=>`<i class="kd${Math.abs(f.t-(time-itemStart(k,it)))<KTOL?' on':''}" data-kt="${itemStart(k,it)+f.t}" style="left:${f.t*pps}px"></i>`).join('');
-  $('#laneM').innerHTML=P.main.map(c=>{const m=media.get(c.mid)||{};return `<div class="clip v${cls('m',c.id)}" data-k="m" data-id="${c.id}" style="left:${c._s*pps}px;width:${dur(c)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(c,'m')}<span class="lbl">${esc(m.name||'')} · ${dur(c).toFixed(1)}ث</span></div>`}).join('')||'<div class="empty-lane">اضغط + على أي فيديو أو صورة في الوسائط</div>';
+  $('#laneM').innerHTML=P.main.map(c=>{const m=media.get(c.mid)||{};return `<div class="clip v${cls('m',c.id)}" data-k="m" data-id="${c.id}" style="left:${c._s*pps}px;width:${dur(c)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(c,'m')}${m.wave?`<span class="vw${c.vol===0?' mute':''}" style="background-image:url('${m.wave}');background-size:${m.duration/(c.speed||1)*pps}px 100%;background-position:${-c.in/(c.speed||1)*pps}px 0"></span>`:''}<span class="lbl">${esc(m.name||'')} · ${dur(c).toFixed(1)}ث</span></div>`}).join('')||'<div class="empty-lane">اضغط + على أي فيديو أو صورة في الوسائط</div>';
   $('#laneM').insertAdjacentHTML('beforeend',P.main.slice(0,-1).map(c=>`<button class="trb${c.tr&&c.tr.type!=='none'?' has':''}${sel&&sel.k==='tr'&&sel.id===c.id?' on':''}" data-tr="${c.id}" style="left:${(c._s+dur(c))*pps-11}px" title="انتقال">⇄</button>`).join(''));
   $('#laneT').innerHTML=P.texts.map(t=>`<div class="clip t${cls('t',t.id)}" data-k="t" data-id="${t.id}" style="left:${t.start*pps}px;width:${t.dur*pps}px">${hd}${kd(t,'t')}<span class="lbl">${esc(t.text)}</span></div>`).join('');
   const ends=[];[...P.audios].sort((a,b)=>a.start-b.start).forEach(a=>{let r=ends.findIndex(e=>e<=a.start+.01);if(r<0)r=ends.length<3?ends.length:2;ends[r]=a.start+dur(a);a._row=r});const R=Math.max(1,ends.length);
-  $('#laneA').innerHTML=P.audios.map(a=>{const m=media.get(a.mid)||{};return `<div class="clip a${cls('a',a.id)}" data-k="a" data-id="${a.id}" style="top:calc(${a._row}*100%/${R});height:calc(100%/${R} - ${R>1?2:0}px);bottom:auto;left:${a.start*pps}px;width:${dur(a)*pps}px;background-image:url('${m.wave||''}');background-size:${(m.duration||1)*pps}px 70%;background-position:${-a.in*pps}px center">${hd}<span class="lbl">♫ ${esc(m.name||'')}</span></div>`}).join('');
+  $('#laneA').innerHTML=P.audios.map(a=>{const m=media.get(a.mid)||{};return `<div class="clip a${cls('a',a.id)}" data-k="a" data-id="${a.id}" style="top:calc(${a._row}*100%/${R});height:calc(100%/${R} - ${R>1?2:0}px);bottom:auto;left:${a.start*pps}px;width:${dur(a)*pps}px;background-image:url('${m.wave||''}');background-size:${(m.duration||1)/(a.speed||1)*pps}px 70%;background-position:${-a.in/(a.speed||1)*pps}px center">${hd}<span class="lbl">♫ ${esc(m.name||'')}</span></div>`}).join('');
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 let drag=null;
@@ -718,7 +760,7 @@ $('#libSounds').addEventListener('click',async e=>{
   const a=e.target.closest('[data-addsnd]');if(a){a.disabled=true;const m=await getSound(a.dataset.addsnd);a.disabled=false;addToTimeline(m);toast('تمت الإضافة في مسار الصوت');return}
   const x=e.target.closest('[data-ext]');if(x){const m=media.get(x.dataset.ext);layout();const c=P.main.find(c=>c.mid===m.id);
     if(c)return extractAudio(c);
-    x.disabled=true;const am={id:uid(),type:'audio',name:'صوت '+m.name,url:m.url,duration:m.duration,wave:await waveOf(m.file,m.duration),lib:true,srcOf:m.id};media.set(am.id,am);m.audioMedia=am.id;persistMedia(am);addToTimeline(am)}
+    x.disabled=true;const am={id:uid(),type:'audio',name:'صوت '+m.name,url:m.url,file:m.file,duration:m.duration,wave:m.wave||await waveOf(m.file,m.duration),lib:true,srcOf:m.id};media.set(am.id,am);m.audioMedia=am.id;persistMedia(am);addToTimeline(am)}
 });
 function renderProps(){
   const s=getSel(),el=$('#props'),x='<button class="mob sheet-x" data-close>✕</button>';
@@ -795,6 +837,10 @@ function renderProps(){
     ${sel.k==='m'?`<div class="field"><span class="lab">الملاءمة</span><div class="seg"><button data-fit="contain" class="${s.fit!=='cover'?'on':''}">احتواء</button><button data-fit="cover" class="${s.fit==='cover'?'on':''}">ملء الشاشة</button></div></div>`:''}
     ${m.type==='image'?`<div class="field"><label for="pDur">المدة (ثانية)</label><input type="number" id="pDur" min="0.2" step="0.1" value="${dur(s).toFixed(1)}"></div>`:''}
     ${sel.k==='m'&&m.type==='video'?`<h4 class="sec">⏱ السرعة · <span id="pSpV">${(s.speed||1)}x</span></h4><div class="chips">${[.25,.5,1,1.5,2,3].map(v=>`<button data-sp="${v}" class="${(s.speed||1)===v?'on':''}">${v}x</button>`).join('')}</div><input type="range" id="pSp" min="0.1" max="4" step="0.05" value="${s.speed||1}" aria-label="السرعة">`:''}
+    ${(sel.k==='a'||m.type==='video')?`<h4 class="sec">🔇 حذف الأجزاء الهادئة</h4><p class="hint" style="margin-top:0">أي جزء صوته أقل من الحد ينحذف تلقائياً، مثل الصمت بين الكلام.</p>
+    <div class="field"><label for="slThr">الحد · <span id="slThrV">${silThr} dB</span></label><input type="range" id="slThr" min="-70" max="-10" step="1" value="${silThr}"></div>
+    <div class="field"><label for="slMin">أقل مدة للصمت · <span id="slMinV">${silMin.toFixed(2)} ث</span></label><input type="range" id="slMin" min="0.1" max="2" step="0.05" value="${silMin}"></div>
+    <canvas id="slViz" class="slviz"></canvas><p class="hint" id="slInfo">جاري تحليل الصوت…</p><button id="slGo" class="primary" disabled>✂ احذف الأجزاء الهادئة</button>`:''}
     ${sel.k==='m'?`<h4 class="sec">◐ فلتر</h4><div class="flgrid">${FILTERS.map(([k,n,f])=>`<button data-flt="${k}" class="${(s.filter||'none')===k?'on':''}"><span style="background-image:url('${m.thumb||''}');filter:${f||'none'}"></span>${n}</button>`).join('')}</div>
     ${[['aB','b','السطوع',.3,1.8],['aC','c','التباين',.3,1.8],['aS','s','التشبع',0,2.5]].map(([id,k,n,mn,mx])=>`<div class="field"><label for="${id}">${n} · <span id="${id}V">${Math.round(((s.adj||{})[k]??1)*100)}%</span></label><input type="range" id="${id}" data-adj="${k}" min="${mn}" max="${mx}" step="0.01" value="${(s.adj||{})[k]??1}"></div>`).join('')}
     <h4 class="sec">◆ كي فريم وتحريك المقطع</h4>${kfPanel(s,'m')}`:''}
@@ -807,6 +853,7 @@ function renderProps(){
   el.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{commit();s.fit=b.dataset.fit;renderProps()});
   const px=$('#pExt');if(px)px.onclick=()=>extractAudio(s);
   if(sel.k==='m')bindKf(s,'m');
+  if($('#slThr')){$('#slThr').oninput=e=>{silThr=+e.target.value;$('#slThrV').textContent=silThr+' dB';silencePanel(s,sel.k)};$('#slMin').oninput=e=>{silMin=+e.target.value;$('#slMinV').textContent=silMin.toFixed(2)+' ث';silencePanel(s,sel.k)};silencePanel(s,sel.k)}
   el.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{commit();s.speed=+b.dataset.sp;refresh()});
   const sp=$('#pSp');if(sp){sp.addEventListener('pointerdown',once);sp.addEventListener('input',e=>{once();s.speed=+e.target.value;$('#pSpV').textContent=s.speed+'x';renderTimeline()});sp.addEventListener('change',()=>refresh())}
   el.querySelectorAll('[data-flt]').forEach(b=>b.onclick=()=>{commit();s.filter=b.dataset.flt;renderProps()});
