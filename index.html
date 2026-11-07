@@ -367,7 +367,7 @@ function commit(){hist.push(JSON.stringify(P));if(hist.length>120)hist.shift();f
 function undo(){if(!hist.length)return;fut.push(JSON.stringify(P));P=JSON.parse(hist.pop());afterLoad()}
 function redo(){if(!fut.length)return;hist.push(JSON.stringify(P));P=JSON.parse(fut.pop());afterLoad()}
 function afterLoad(){P.overlays=P.overlays||[];if(sel&&!getSel())sel=null;setRatio(P.ratio,false);refresh()}
-function updBtns(){$('#undo').disabled=!hist.length;$('#redo').disabled=!fut.length;const s=getSel();$('#del').disabled=$('#dup').disabled=!s;$('#mProps').disabled=false}
+function updBtns(){$('#undo').disabled=!hist.length;$('#redo').disabled=!fut.length;const s=getSel();$('#del').disabled=$('#dup').disabled=!s;$('#del').textContent=kfSelected(s)?'⌫ حذف الكي فريم':'⌫ حذف';$('#mProps').disabled=false}
 
 /* ---------- media import ---------- */
 async function thumbOf(el){
@@ -599,8 +599,8 @@ function kfPanel(it,kind){
 }
 function bindKf(it,kind){
   const el=$('#props');if(!$('#kfTog'))return;
-  $('#kfTog').onclick=()=>{commit();const t=lt(kind,it),h=kfAt(it,t);if(h)it.kf.splice(it.kf.indexOf(h),1);else addKf(it,t);refresh()};
-  const go=d=>{const t=lt(kind,it),K=it.kf||[];const k=d<0?[...K].reverse().find(k=>k.t<t-KTOL):K.find(k=>k.t>t+KTOL);if(k){pause();seek(itemStart(kind,it)+k.t);renderProps()}};
+  $('#kfTog').onclick=()=>{commit();const t=lt(kind,it),h=kfAt(it,t);if(h)it.kf.splice(it.kf.indexOf(h),1);else{addKf(it,t);selKf={id:it.id}}refresh()};
+  const go=d=>{const t=lt(kind,it),K=it.kf||[];const k=d<0?[...K].reverse().find(k=>k.t<t-KTOL):K.find(k=>k.t>t+KTOL);if(k){pause();seek(itemStart(kind,it)+k.t);selKf={id:it.id};refresh()}};
   $('#kfPrev').onclick=()=>go(-1);$('#kfNext').onclick=()=>go(1);
   let c=0;const once=()=>{if(!c){commit();c=1}};
   [['kX','x',v=>Math.round(v*100)+'%'],['kY','y',v=>Math.round(v*100)+'%'],['kS','scale',v=>Math.round(v*100)+'%'],['kR','rot',v=>Math.round(v)+'°'],['kO','opacity',v=>Math.round(v*100)+'%']].forEach(([id,k,f])=>{
@@ -945,7 +945,7 @@ cv.addEventListener('pointerdown',e=>{
   if(exporting)return;const p=cpos(e);const hit=[...P.texts].reverse().find(t=>t._box&&p.x>=t._box.x&&p.x<=t._box.x+t._box.w&&p.y>=t._box.y&&p.y<=t._box.y+t._box.h);
   let it=hit,kind='t';if(!hit){const ov=[...P.overlays].reverse().find(o=>o._box&&p.x>=o._box.x&&p.x<=o._box.x+o._box.w&&p.y>=o._box.y&&p.y<=o._box.y+o._box.h);
     if(ov){it=ov;kind='o'}else{it=activeMain(time);kind='m';if(!it){sel=null;refresh();return}}}
-  sel={k:kind,id:it.id};refresh();
+  sel={k:kind,id:it.id};selKf=null;refresh();
   const v0=evalP(it,lt(kind,it)),p0=p,lo=kind==='t'?0:kind==='o'?-.5:-1.5,hi=kind==='t'?1:kind==='o'?1.5:1.5;let moved=false;cv.setPointerCapture(e.pointerId);
   const mv=ev=>{const q=cpos(ev);if(!moved){if(Math.hypot(q.x-p0.x,q.y-p0.y)<4)return;commit();moved=true}
     setProp(it,kind,'x',clamp(v0.x+(q.x-p0.x)/cv.width,lo,hi));setProp(it,kind,'y',clamp(v0.y+(q.y-p0.y)/cv.height,lo,hi))};
@@ -970,7 +970,11 @@ function split(){
   refresh();toast(k==='m'?'تم التقسيم. اضغط ⇄ بين المقطعين عشان تضيف انتقال':'تم التقسيم');
 }
 function hitsTime(k,s){if(k==='m')return time>=s._s&&time<s._s+dur(s);if(k==='t')return time>=s.start&&time<s.start+s.dur;return time>=s.start&&time<s.start+dur(s)}
-function del(){const s=getSel();if(!s)return;commit();if(sel.k==='tr'){delete s.tr;refresh();return}const a=list(sel.k);a.splice(a.indexOf(s),1);sel=null;seek(time);refresh()}
+let selKf=null; // set when a keyframe (not the whole clip) is the thing being worked on
+const kfSelected=s=>s&&selKf&&selKf.id===s.id&&s.kf&&kfAt(s,lt(sel.k,s));
+function del(){const s=getSel();if(!s)return;
+  const h=kfSelected(s);if(h){commit();s.kf.splice(s.kf.indexOf(h),1);selKf=null;refresh();return toast('تم حذف الكي فريم')}
+  commit();if(sel.k==='tr'){delete s.tr;refresh();return}const a=list(sel.k);a.splice(a.indexOf(s),1);sel=null;seek(time);refresh()}
 function dup(){const s=getSel();if(!s||sel.k==='tr')return;commit();const a=list(sel.k),n={...JSON.parse(JSON.stringify(s)),id:uid()};
   if(sel.k==='t')n.start=s.start+s.dur;else if(sel.k==='a'||sel.k==='o')n.start=s.start+dur(s);
   a.splice(a.indexOf(s)+1,0,n);sel={k:sel.k,id:n.id};refresh()}
@@ -997,13 +1001,13 @@ $('#inner').addEventListener('pointerdown',e=>{
   if(exporting)return;ensureAudio();
   const ix=()=>e.clientX-$('#inner').getBoundingClientRect().left;
   const trb=e.target.closest('.trb');if(trb){sel={k:'tr',id:trb.dataset.tr};refresh();openSheet('props');return}
-  const kdi=e.target.closest('.kd');if(kdi){const c=kdi.closest('.clip');sel={k:c.dataset.k,id:c.dataset.id};pause();seek(+kdi.dataset.kt);refresh();return}
+  const kdi=e.target.closest('.kd');if(kdi){const c=kdi.closest('.clip');sel={k:c.dataset.k,id:c.dataset.id};selKf={id:c.dataset.id};pause();seek(+kdi.dataset.kt);refresh();return}
   const el=e.target.closest('.clip');
   if(!el){
     if(e.target.closest('#ruler')||e.pointerType==='mouse'){drag={type:'scrub'};pause();seek(ix()/pps);if(sel){sel=null;refresh()}}
     else{drag=null;if(e.pointerType!=='mouse'){/* tap on empty lane seeks */const x=ix();const up=()=>{seek(x/pps);window.removeEventListener('pointerup',up)};window.addEventListener('pointerup',up)}return}
   }else{
-    const k=el.dataset.k,id=el.dataset.id,item=list(k).find(x=>x.id===id);sel={k,id};
+    const k=el.dataset.k,id=el.dataset.id,item=list(k).find(x=>x.id===id);sel={k,id};selKf=null;
     const h=e.target.closest('.h');layout();
     drag={type:h?(h.classList.contains('l')?'L':'R'):'move',k,item,x0:e.clientX,snap:{...item},moved:false};refresh();
   }
@@ -1232,7 +1236,7 @@ $('#play').onclick=()=>playing?pause():play();
 $('#toStart').onclick=()=>seek(0);$('#back').onclick=()=>seek(time-1);$('#fwd').onclick=()=>seek(time+1);
 $('#addText').onclick=addText;
 $('#kfBtn').onclick=kfToggle;
-function kfToggle(){const s=getSel();if(!s||sel.k==='tr')return toast('اختر نص أو مقطع أول');commit();const t=lt(sel.k,s),h=kfAt(s,t);if(h){s.kf.splice(s.kf.indexOf(h),1);toast('تم حذف الكي فريم')}else{addKf(s,t);toast('تمت إضافة كي فريم ◆')}if(sel.k==='t')$('#props')._tab='kf';refresh();openSheet('props')}
+function kfToggle(){const s=getSel();if(!s||sel.k==='tr')return toast('اختر نص أو مقطع أول');commit();const t=lt(sel.k,s),h=kfAt(s,t);if(h){s.kf.splice(s.kf.indexOf(h),1);toast('تم حذف الكي فريم')}else{addKf(s,t);selKf={id:s.id};toast('تمت إضافة كي فريم ◆')}if(sel.k==='t')$('#props')._tab='kf';refresh();openSheet('props')}
 function applyTheme(th){document.documentElement.setAttribute('data-theme',th);const b=$('#themeBtn');b.textContent=th==='dark'?'☀':'☾';b.title=th==='dark'?'الوضع الصباحي':'الوضع الليلي'}
 {let th0=null;try{th0=localStorage.getItem('laqta-theme')}catch(e){}applyTheme(th0||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'))}
 $('#themeBtn').onclick=()=>{const n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';applyTheme(n);try{localStorage.setItem('laqta-theme',n)}catch(e){}};$('#split').onclick=split;$('#del').onclick=del;$('#dup').onclick=dup;$('#undo').onclick=undo;$('#redo').onclick=redo;
