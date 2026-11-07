@@ -195,7 +195,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 @keyframes hIn{0%{transform:translateY(12px);opacity:0}100%{transform:none;opacity:1}}
 .hero .nb{transition:transform .15s}.hero .nb:active{transform:scale(.96)}
 .tg button i{transition:transform .2s}.tg button:hover i{transform:translateY(-3px)}
-@media (prefers-reduced-motion:reduce){#splash,.spl *,#homeBody.anim>*{animation:none!important;transition:none!important}}
+@media (prefers-reduced-motion:reduce){.clip.pop,#clipBar.anim,#mtools.anim button,#splash,.spl *,#homeBody.anim>*{animation:none!important;transition:none!important}}
 .upd{background:var(--panel);border:1.5px solid var(--accent);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
 .upd b{font-size:15px}.upd small{color:var(--mute);line-height:1.7}.upd .bar{margin:0}
 .appad{display:block;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px;color:var(--text);text-decoration:none;font-weight:700}
@@ -263,6 +263,14 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
   #mtools{gap:2px;overflow-x:auto;scrollbar-width:none;padding:6px 4px;border-bottom:1px solid var(--line);background:var(--panel)}
   #mtools button{flex-direction:column;gap:2px;min-width:56px;background:none;border:0;color:var(--mute);font-size:10.5px;padding:2px 4px}#mtools b{font-size:18px;color:var(--text);font-weight:400}
   #mtools .back{min-width:36px;font-size:22px;border-left:1px solid var(--line);border-radius:0}
+  .clip.pop{animation:selPop .32s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes selPop{0%{transform:scaleY(.82);filter:brightness(1.6)}60%{filter:brightness(1.15)}100%{transform:none;filter:none}}
+  #clipBar.anim{animation:barIn .26s cubic-bezier(.2,.9,.3,1.3) both}
+  @keyframes barIn{0%{opacity:0;transform:translateY(12px) scale(.85)}100%{opacity:1;transform:none}}
+  #mtools.anim button{animation:toolIn .3s cubic-bezier(.2,.8,.2,1) both}
+  #mtools.anim button:nth-child(2){animation-delay:.03s}#mtools.anim button:nth-child(3){animation-delay:.06s}#mtools.anim button:nth-child(4){animation-delay:.09s}#mtools.anim button:nth-child(5){animation-delay:.12s}#mtools.anim button:nth-child(6){animation-delay:.15s}#mtools.anim button:nth-child(n+7){animation-delay:.18s}
+  @keyframes toolIn{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}
+  #mtools button:active,#clipBar button:active{transform:scale(.9)}
   #kfFab{position:absolute;left:14px;bottom:10px;width:40px;height:40px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:#ffd36e;font-size:15px;justify-content:center;padding:0;z-index:6}
   #kfFab.on{background:#ffd36e;color:#1a1400;border-color:#ffd36e}#kfFab.dis{opacity:.45}
   .qchip{font-size:11.5px;padding:5px 10px}
@@ -1019,12 +1027,14 @@ function dup(){const s=getSel();if(!s||sel.k==='tr')return;commit();const a=list
 /* ---------- timeline ---------- */
 const isMob=()=>matchMedia('(max-width:899px)').matches;
 function tlTime(cx){return(cx-$('#laneM').getBoundingClientRect().left)/pps}
+let lastPop=null,lastMobSel=null;
 function renderTimeline(){
   const T=total(),sc=$('#scroll'),pad=isMob()?Math.round(sc.clientWidth/2):0,W=pad?T*pps+2*pad:Math.max(sc.clientWidth,(T+8)*pps);$('#inner').style.width=W+'px';$('#inner').style.paddingLeft=$('#inner').style.paddingRight=pad+'px';
   const steps=[.5,1,2,5,10,15,30,60,120],step=steps.find(s=>s*pps>=64)||120;let r='';
   for(let t=0;t*pps<W;t+=step)r+=`<span style="left:${t*pps}px">${fmt(t,false)}</span>`;$('#ruler').innerHTML=r;
   layout();
-  const cls=(k,id)=>sel&&sel.k===k&&sel.id===id?' sel':'';
+  const popId=sel&&sel.id!==lastPop?sel.id:null;lastPop=sel?sel.id:null;
+  const cls=(k,id)=>sel&&sel.k===k&&sel.id===id?' sel'+(popId===id?' pop':''):'';
   const hd='<i class="h l"></i><i class="h r"></i>';
   const kd=(it,k)=>(it.kf||[]).map((f,i)=>`<i class="kd${Math.abs(f.t-(time-itemStart(k,it)))<KTOL?' on':''}" data-ki="${i}" data-kt="${itemStart(k,it)+f.t}" style="left:${f.t*pps}px"></i>`).join('');
   $('#laneM').innerHTML=P.main.map(c=>{const m=media.get(c.mid)||{};return `<div class="clip v${cls('m',c.id)}" data-k="m" data-id="${c.id}" style="left:${c._s*pps}px;width:${dur(c)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(c,'m')}${m.wave?`<span class="vw${c.vol===0?' mute':''}" style="background-image:url('${m.wave}');background-size:${m.duration/(c.speed||1)*pps}px 100%;background-position:${-c.in/(c.speed||1)*pps}px 0"></span>`:''}<span class="lbl">${esc(m.name||'')} · ${dur(c).toFixed(1)}ث</span></div>`}).join('')||'<div class="empty-lane">اضغط + على أي فيديو أو صورة في الوسائط</div>';
@@ -1102,9 +1112,9 @@ function placeClipBar(){
 }
 const MT={
   none:[['T','نص',()=>addText()],['♫','صوت',()=>{libTab='sounds';renderLib();openSheet('lib')}],['🎙','تسجيل',()=>toggleRec()],['✿','ستيكر',()=>{libTab='stickers';renderLib();openSheet('lib')}],['⧉','طبقة',()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة')}],['📝','كتابة تلقائية',()=>$('#capBtn').click()],['☰','الترجمة',()=>openCaps()],['▣','الوسائط',()=>{libTab='files';renderLib();openSheet('lib')}],['⚙','المشروع',()=>openSheet('props')]],
-  m:[['⏱','السرعة','السرعة'],['🔊','الصوت','pVol'],['🎤','مغيّر','مغيّر الصوت'],['◐','ضبط','فلتر'],['🌀','تأثير','تأثيرات'],['🖌','قناع','القناع'],['✂️','قص الصورة','قص الصورة'],['🟩','شاشة خضراء','الشاشة الخضراء'],['🔇','الصمت','حذف الأجزاء'],['📝','كتابة','كتابة تلقائية'],['♫','استخراج',()=>{const s=getSel();if(s)extractAudio(s)}],['◆','التحريك','كي فريم وتحريك']],
-  t:[['✎','النص','font'],['🎨','التنسيق','style'],['✨','الحركة','anim'],['◆','كي فريم','kf']],
-  a:[['🔊','الصوت','pVol'],['🎤','مغيّر','مغيّر الصوت'],['📝','كتابة','كتابة تلقائية'],['🔇','الصمت','حذف الأجزاء'],['◆','كي فريم','كي فريم للصوت']]};
+  m:[['✂','تقسيم',()=>split()],['⏱','السرعة','السرعة'],['🔊','الصوت','pVol'],['🎤','مغيّر','مغيّر الصوت'],['◐','ضبط','فلتر'],['🌀','تأثير','تأثيرات'],['🖌','قناع','القناع'],['✂️','قص الصورة','قص الصورة'],['🟩','شاشة خضراء','الشاشة الخضراء'],['🔇','الصمت','حذف الأجزاء'],['📝','كتابة','كتابة تلقائية'],['♫','استخراج',()=>{const s=getSel();if(s)extractAudio(s)}],['◆','التحريك','كي فريم وتحريك']],
+  t:[['✂','تقسيم',()=>split()],['✎','النص','font'],['🎨','التنسيق','style'],['✨','الحركة','anim'],['◆','كي فريم','kf']],
+  a:[['✂','تقسيم',()=>split()],['🔊','الصوت','pVol'],['🎤','مغيّر','مغيّر الصوت'],['📝','كتابة','كتابة تلقائية'],['🔇','الصمت','حذف الأجزاء'],['◆','كي فريم','كي فريم للصوت']]};
 MT.o=MT.m.filter(x=>x[1]!=='استخراج');
 function openSec(key){
   if(sel&&sel.k==='t'&&['font','style','anim','kf'].includes(key)){$('#props')._tab=key;renderProps();openSheet('props');return}
@@ -1303,7 +1313,8 @@ function previewAnim(t,end){const keep=sel;sel=null;seek(end?Math.max(t.start,t.
 document.getElementById('fontFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)addFont(f);e.target.value=''});
 function ratioBtns(){return Object.keys(RATIOS).map(r=>`<button data-ratio="${r}" class="${r===P.ratio?'on':''}">${r}</button>`).join('')}
 document.addEventListener('click',e=>{const r=e.target.closest('[data-ratio]');if(r){setRatio(r.dataset.ratio);refresh()}if(e.target.closest('[data-close]'))closeSheets()});
-function refreshMob(){if(!isMob())return;renderMobTools();placeClipBar();const T=P.texts.length,A=P.audios.length;$('#addTxtChip').hidden=!!T;$('#addAudChip').hidden=!!A;$('#qChip').textContent=(expOpt.q==='4k'?'4K':expOpt.q+'p')+' ▾'}
+function refreshMob(){if(!isMob())return;renderMobTools();placeClipBar();
+  const key=sel?sel.k+sel.id:'';if(key!==lastMobSel){lastMobSel=key;for(const e of [$('#clipBar'),$('#mtools')]){e.classList.remove('anim');void e.offsetWidth;e.classList.add('anim')}}const T=P.texts.length,A=P.audios.length;$('#addTxtChip').hidden=!!T;$('#addAudChip').hidden=!!A;$('#qChip').textContent=(expOpt.q==='4k'?'4K':expOpt.q+'p')+' ▾'}
 function refresh(){if(del._ok){del._ok=false;clearTimeout(del._h);$('#del').classList.remove('warn')}renderTimeline();renderProps();updBtns();refreshInfo();refreshMob()}
 function openSheet(id){if(matchMedia('(max-width:899px)').matches){closeSheets();$('#'+id).classList.add('open');$('#scrim').classList.add('open')}}
 function closeSheets(){document.querySelectorAll('.panel.open').forEach(p=>p.classList.remove('open'));$('#scrim').classList.remove('open')}
