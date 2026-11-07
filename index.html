@@ -1006,7 +1006,8 @@ cv.addEventListener('dblclick',()=>{if(sel&&sel.k==='t'){openSheet('props');cons
 /* ---------- editing actions ---------- */
 function addText(){
   commit();const t=norm({id:uid(),text:'اكتب نصك هنا',start:+time.toFixed(2),dur:3,size:Math.round(cv.width*.075),color:'#ffffff',font:'Cairo',x:.5,y:.2,bg:false});
-  P.texts.push(t);sel={k:'t',id:t.id};refresh();openSheet('props');setTimeout(()=>{const ta=$('#pText');if(ta&&matchMedia('(min-width:900px)').matches){ta.focus();ta.select()}},50);
+  P.texts.push(t);sel={k:'t',id:t.id};$('#props')._tab='font';refresh();openSheet('props');
+  const ta=$('#pText');if(ta){ta.focus();ta.select()} // focus inside the tap so the phone keyboard opens
 }
 function split(){
   layout();if(sel&&sel.k==='tr')sel=null;let s=getSel();
@@ -1120,10 +1121,10 @@ function placeClipBar(){
   let top=r.top-wr.top-bh-6;if(top<0)top=r.bottom-wr.top+6;b.style.top=top+'px';b.style.left=(cx-wr.left-bw/2)+'px';
 }
 const MT={
-  none:[['text','نص',()=>addText()],['music','صوت',()=>{libTab='sounds';renderLib();openSheet('lib')}],['mic','تسجيل',()=>toggleRec()],['speech','كتابة الكلام',()=>autoCaption(null,'m')],['list','النصوص',()=>openCaps()],['layers','طبقة',()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة')}],['sticker','ستيكر',()=>{libTab='stickers';renderLib();openSheet('lib')}],['media','الوسائط',()=>{libTab='files';renderLib();openSheet('lib')}],['settings','المشروع',()=>openSheet('props')]],
-  m:[['cut','تقسيم',()=>split()],['speed','السرعة','السرعة'],['vol','الصوت','pVol'],['adjust','ضبط','فلتر'],['fx','تأثير','تأثيرات'],['crop','قص','قص الصورة'],['voice','مغيّر الصوت','مغيّر الصوت'],['mask','قناع','القناع'],['green','شاشة خضراء','الشاشة الخضراء'],['silence','حذف الصمت','حذف الأجزاء'],['speech','كتابة الكلام',()=>autoCaption(getSel(),sel.k)],['extract','استخراج الصوت',()=>{const s=getSel();if(s)extractAudio(s)}],['move','التحريك','كي فريم وتحريك']],
+  none:[['text','نص',()=>addText()],['speech','كتابة تلقائية',()=>autoCaption(null,'m')],['music','صوت',()=>{libTab='sounds';renderLib();openSheet('lib')}],['mic','تسجيل',()=>toggleRec()],['list','النصوص',()=>openCaps()],['layers','طبقة',()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة')}],['sticker','ستيكر',()=>{libTab='stickers';renderLib();openSheet('lib')}],['media','الوسائط',()=>{libTab='files';renderLib();openSheet('lib')}],['settings','المشروع',()=>openSheet('props')]],
+  m:[['cut','تقسيم',()=>split()],['speech','كتابة تلقائية',()=>autoCaption(getSel(),sel.k)],['speed','السرعة','السرعة'],['vol','الصوت','pVol'],['adjust','ضبط','فلتر'],['fx','تأثير','تأثيرات'],['crop','قص','قص الصورة'],['voice','مغيّر الصوت','مغيّر الصوت'],['mask','قناع','القناع'],['green','شاشة خضراء','الشاشة الخضراء'],['silence','حذف الصمت','حذف الأجزاء'],['extract','استخراج الصوت',()=>{const s=getSel();if(s)extractAudio(s)}],['move','التحريك','كي فريم وتحريك']],
   t:[['cut','تقسيم',()=>split()],['font','الخط','font'],['style','التنسيق','style'],['anim','الحركة','anim'],['kf','كي فريم','kf']],
-  a:[['cut','تقسيم',()=>split()],['vol','الصوت','pVol'],['voice','مغيّر الصوت','مغيّر الصوت'],['speech','كتابة الكلام',()=>autoCaption(getSel(),sel.k)],['silence','حذف الصمت','حذف الأجزاء'],['kf','كي فريم','كي فريم للصوت']]};
+  a:[['cut','تقسيم',()=>split()],['vol','الصوت','pVol'],['voice','مغيّر الصوت','مغيّر الصوت'],['speech','كتابة تلقائية',()=>autoCaption(getSel(),sel.k)],['silence','حذف الصمت','حذف الأجزاء'],['kf','كي فريم','كي فريم للصوت']]};
 MT.o=MT.m.filter(x=>x[1]!=='استخراج الصوت');
 function openSec(key){
   if(sel&&sel.k==='t'&&['font','style','anim','kf'].includes(key)){$('#props')._tab=key;renderProps();openSheet('props');return}
@@ -1360,9 +1361,10 @@ document.addEventListener('click',e=>{const r=e.target.closest('[data-ratio]');i
 function refreshMob(){if(!isMob())return;renderMobTools();placeClipBar();
   const key=sel?sel.k+sel.id:'';if(key!==lastMobSel){lastMobSel=key;for(const e of [$('#clipBar'),$('#mtools')]){e.classList.remove('anim');void e.offsetWidth;e.classList.add('anim')}}const T=P.texts.length,A=P.audios.length;$('#addTxtChip').hidden=!!T;$('#addAudChip').hidden=!!A;$('#qChip').textContent=(expOpt.q==='4k'?'4K':expOpt.q+'p')+' ▾'}
 function refresh(){if(del._ok){del._ok=false;clearTimeout(del._h);$('#del').classList.remove('warn')}renderTimeline();renderProps();updBtns();refreshInfo();refreshMob()}
-function openSheet(id){if(matchMedia('(max-width:899px)').matches){closeSheets();$('#'+id).classList.add('open');$('#scrim').classList.add('open')}}
+let sheetAt=0;
+function openSheet(id){if(matchMedia('(max-width:899px)').matches){closeSheets();$('#'+id).classList.add('open');$('#scrim').classList.add('open');sheetAt=performance.now()}}
 function closeSheets(){document.querySelectorAll('.panel.open').forEach(p=>p.classList.remove('open'));$('#scrim').classList.remove('open')}
-$('#scrim').onclick=closeSheets;$('#mLib').onclick=()=>{libTab='files';renderLib();openSheet('lib')};
+$('#scrim').onclick=()=>{if(performance.now()-sheetAt>500)closeSheets()};$('#mLib').onclick=()=>{libTab='files';renderLib();openSheet('lib')};
 $('#homeBtn').onclick=showHome;$('#tourBtn').onclick=startTour;$('#capsBtn').onclick=openCaps;
 $('#addOv').onclick=()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة عشان تحطها فوق الفيديو')};
 $('#capBtn').onclick=()=>{let s=getSel(),k=sel&&sel.k;const ok=s&&(k==='a'||((k==='m'||k==='o')&&(media.get(s.mid)||{}).type==='video'));if(!ok){layout();s=P.main.find(c=>(media.get(c.mid)||{}).type==='video');k='m'}if(!s)return toast('أضف فيديو فيه كلام أول');autoCaption(s,k)};
