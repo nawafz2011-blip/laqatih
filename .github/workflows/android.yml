@@ -17,12 +17,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # Keep Android's debug signing key between builds so each new APK installs as an update.
+      # One signing key for every build, so each new APK installs as an update over the last one.
+      # It lives in the Actions cache (never in the repository); a key in the LAQTA_KEYSTORE_BASE64 secret takes priority.
       - name: Restore signing key
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: laqta-debug-keystore-v1
+          path: ~/laqta-signing
+          key: laqta-signing-v2
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
@@ -30,19 +31,29 @@ jobs:
         run: |
           mkdir -p android/app/src/main/assets
           cp index.html android/app/src/main/assets/index.html
-      - name: Load signing key (optional)
+      - name: Prepare signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.LAQTA_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.LAQTA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.LAQTA_KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/laqta.keystore"
             echo "LAQTA_KEYSTORE_PATH=$RUNNER_TEMP/laqta.keystore" >> "$GITHUB_ENV"
+            echo "LAQTA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "LAQTA_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          else
+            mkdir -p ~/laqta-signing
+            if [ ! -f ~/laqta-signing/laqta.keystore ]; then
+              keytool -genkeypair -keystore ~/laqta-signing/laqta.keystore -alias laqta -keyalg RSA -keysize 2048 \
+                -validity 10000 -storepass android -keypass android -dname "CN=Laqta, O=Laqta, C=SA"
+            fi
+            echo "LAQTA_KEYSTORE_PATH=$HOME/laqta-signing/laqta.keystore" >> "$GITHUB_ENV"
+            echo "LAQTA_KEYSTORE_PASSWORD=android" >> "$GITHUB_ENV"
+            echo "LAQTA_KEY_ALIAS=laqta" >> "$GITHUB_ENV"
           fi
       - name: Build
         working-directory: android
-        env:
-          LAQTA_KEYSTORE_PASSWORD: ${{ secrets.LAQTA_KEYSTORE_PASSWORD }}
-          LAQTA_KEY_ALIAS: ${{ secrets.LAQTA_KEY_ALIAS }}
         run: gradle assembleRelease --no-daemon
       - name: Rename APK
         run: cp android/app/build/outputs/apk/release/app-release.apk laqta.apk
