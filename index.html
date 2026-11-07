@@ -264,7 +264,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
   .addend{display:grid;position:absolute;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:9px;background:#fff;color:#000;font-size:20px;font-weight:800;place-items:center;padding:0;border:0;z-index:5}
   #mtools{gap:2px;overflow-x:auto;scrollbar-width:none;padding:6px 4px;border-bottom:1px solid var(--line);background:var(--panel)}
   #mtools button{flex-direction:column;gap:5px;min-width:62px;background:none;border:0;color:var(--mute);font-size:10.5px;padding:2px 3px;white-space:nowrap}#mtools b{font-size:18px;color:var(--text);font-weight:400}
-  #mtools .ibx{width:44px;height:44px;border-radius:14px;background:var(--panel2);display:grid;place-items:center;color:var(--text)}#mtools button:first-child:not(.back) .ibx,#mtools .back+button .ibx{background:var(--accent);color:#fff}
+  #mtools .ibx{width:44px;height:44px;border-radius:14px;background:var(--panel2);display:grid;place-items:center;color:var(--text)}#mtools .back+button .ibx{background:var(--accent);color:#fff}
   #mtools .back{min-width:40px;color:var(--text);justify-content:center}
   .clip.pop{animation:selPop .32s cubic-bezier(.34,1.56,.64,1)}
   @keyframes selPop{0%{transform:scaleY(.82);filter:brightness(1.6)}60%{filter:brightness(1.15)}100%{transform:none;filter:none}}
@@ -1048,7 +1048,7 @@ function renderTimeline(){
   const kd=(it,k)=>(it.kf||[]).map((f,i)=>`<i class="kd${Math.abs(f.t-(time-itemStart(k,it)))<KTOL?' on':''}" data-ki="${i}" data-kt="${itemStart(k,it)+f.t}" style="left:${f.t*pps}px"></i>`).join('');
   $('#laneM').innerHTML=P.main.map(c=>{const m=media.get(c.mid)||{};return `<div class="clip v${cls('m',c.id)}" data-k="m" data-id="${c.id}" style="left:${c._s*pps}px;width:${dur(c)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(c,'m')}${m.wave?`<span class="vw${c.vol===0?' mute':''}" style="background-image:url('${m.wave}');background-size:${m.duration/(c.speed||1)*pps}px 100%;background-position:${-c.in/(c.speed||1)*pps}px 0"></span>`:''}<span class="lbl">${esc(m.name||'')} · ${dur(c).toFixed(1)}ث</span></div>`}).join('')||'<div class="empty-lane">اضغط + على أي فيديو أو صورة في الوسائط</div>';
   $('#laneM').insertAdjacentHTML('beforeend',P.main.slice(0,-1).map(c=>`<button class="trb${c.tr&&c.tr.type!=='none'?' has':''}${sel&&sel.k==='tr'&&sel.id===c.id?' on':''}" data-tr="${c.id}" style="left:${(c._s+dur(c))*pps-11}px" title="انتقال">⇄</button>`).join(''));
-  $('#laneO').innerHTML=P.overlays.map(o=>{const m=media.get(o.mid)||{};return `<div class="clip v ovc${cls('o',o.id)}" data-k="o" data-id="${o.id}" style="left:${o.start*pps}px;width:${dur(o)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(o,'o')}<span class="lbl">⧉ ${esc(m.name||'')}</span></div>`}).join('')||'<div class="empty-lane">اضغط ⧉ على فيديو أو صورة في الوسائط عشان تحطها فوق الفيديو</div>';
+  $('#laneO').innerHTML=P.overlays.map(o=>{const m=media.get(o.mid)||{};return `<div class="clip v ovc${cls('o',o.id)}" data-k="o" data-id="${o.id}" style="left:${o.start*pps}px;width:${dur(o)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(o,'o')}<span class="lbl">⧉ ${esc(m.name||'')}</span></div>`}).join('')||(isMob()?'':'<div class="empty-lane">اضغط ⧉ على فيديو أو صورة في الوسائط عشان تحطها فوق الفيديو</div>');
   $('#laneM').insertAdjacentHTML('beforeend',isMob()?`<button id="addEnd" class="addend" style="left:${layout()*pps+8}px" aria-label="أضف فيديو">+</button>`:'');
   $('#laneT').innerHTML=P.texts.map(t=>`<div class="clip t${cls('t',t.id)}" data-k="t" data-id="${t.id}" style="left:${t.start*pps}px;width:${t.dur*pps}px">${hd}${kd(t,'t')}<span class="lbl">${esc(t.text)}</span></div>`).join('');
   const ends=[];[...P.audios].sort((a,b)=>a.start-b.start).forEach(a=>{let r=ends.findIndex(e=>e<=a.start+.01);if(r<0)r=ends.length<3?ends.length:2;ends[r]=a.start+dur(a);a._row=r});const R=Math.max(1,ends.length);
@@ -1554,11 +1554,13 @@ const DB={db:null,
 let curPid=null,curName='',projects=[],lastSaved='',saveOK=true;
 function persistMedia(m){m.pid=m.pid||curPid;const rec={id:m.id,pid:m.pid,type:m.type,name:m.name,duration:m.duration,lib:!!m.lib,sample:!!m.sample,soundKey:m.soundKey||null,srcOf:m.srcOf||null,wave:m.srcOf?m.wave:null,blob:m.srcOf?null:m.file};DB.put('media',m.id,rec).catch(()=>{saveOK=false})}
 const projJSON=()=>JSON.stringify(P,(k,v)=>k[0]==='_'?undefined:v);
+function projThumb(){ // a real frame of the first clip; the live canvas can still be black when saving
+  for(const c of P.main){const m=media.get(c.mid);if(m&&m.thumb&&m.thumb.startsWith('data:'))return m.thumb}return thumbNow()}
 function thumbNow(){try{const c=document.createElement('canvas'),k=160/Math.max(cv.width,cv.height);c.width=Math.round(cv.width*k);c.height=Math.round(cv.height*k);c.getContext('2d').drawImage(cv,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)}catch(e){return ''}}
 async function saveProject(force){
   if(!curPid)return;const j=projJSON();if(!force&&j===lastSaved)return;lastSaved=j;
   const old=projects.find(x=>x.id===curPid)||{created:Date.now()};
-  const rec={id:curPid,name:curName,json:j,created:old.created,updated:Date.now(),ratio:P.ratio,dur:total(),clips:P.main.length,caps:P.texts.some(t=>t.caption),thumb:thumbNow()};
+  const rec={id:curPid,name:curName,json:j,created:old.created,updated:Date.now(),ratio:P.ratio,dur:total(),clips:P.main.length,caps:P.texts.some(t=>t.caption),thumb:projThumb()};
   try{await DB.put('projects',curPid,rec);saveOK=true;const i=projects.findIndex(x=>x.id===curPid);if(i<0)projects.push(rec);else projects[i]=rec}catch(e){saveOK=false}refreshInfo();
 }
 setInterval(()=>{if(curPid&&!exporting)saveProject()},1500);
