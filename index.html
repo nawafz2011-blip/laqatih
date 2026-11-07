@@ -104,6 +104,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .cgrid button.on{border-color:var(--accent);background:var(--accent-soft)}
 #cEd{display:block;width:100%;max-width:230px;margin:0 auto 6px;aspect-ratio:130/180;background:var(--panel2);border-radius:12px;touch-action:none;overflow:visible}
 .kd{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;background:#ffd36e;border:1.5px solid #222;transform:rotate(45deg);z-index:4;cursor:pointer}
+.kd::after{content:"";position:absolute;inset:-9px}/* bigger tap area */
+@media (pointer:coarse){.kd{width:14px;height:14px;margin:-7px 0 0 -7px}.kd::after{inset:-12px}}
+#undoBar{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:6px 6px 6px 16px;border-radius:12px;font-weight:600;z-index:61;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px #0006}
+#undoBar button{background:var(--accent);color:#fff;border:0;font-weight:700}
 .kd.on{background:#fff;box-shadow:0 0 0 2px var(--accent)}
 h4.sec{font-size:12.5px;margin:18px 0 8px}
 .trb{position:absolute;top:50%;width:24px;height:24px;margin:-12px 0 0 -1px;border-radius:7px;padding:0;justify-content:center;font-size:12px;z-index:4;background:var(--panel);color:var(--text);border:1.5px solid var(--accent)}
@@ -120,6 +124,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .stk{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
 .stk button{font-size:24px;justify-content:center;padding:6px 0;border-radius:10px}
 #pSp{margin:8px 0 4px}
+.tbar button.warn{background:#ff3b5c;color:#fff;border-color:#ff3b5c}
 #recPill{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#ff3b5c;color:#fff;border:0;border-radius:20px;padding:7px 16px;font-weight:700;z-index:5;box-shadow:0 6px 18px #ff3b5c66;animation:recP 1.3s ease-in-out infinite}
 @keyframes recP{50%{box-shadow:0 0 0 8px #ff3b5c22}}
 .slviz{display:block;width:100%;height:60px;background:var(--panel2);border-radius:8px;border:1px solid var(--line)}
@@ -353,6 +358,7 @@ let actx=null,adest=null,dl=null;
 if(window.claude&&claude.use)claude.use('downloads').then(x=>dl=x).catch(()=>{});
 
 const cv=$('#cv'),g=cv.getContext('2d');
+function undoBar(msg){let b=$('#undoBar');if(b)b.remove();b=document.createElement('div');b.id='undoBar';b.innerHTML=`<span>${msg}</span><button>↶ تراجع</button>`;b.querySelector('button').onclick=()=>{undo();b.remove()};document.body.appendChild(b);clearTimeout(undoBar._h);undoBar._h=setTimeout(()=>b.remove(),5000)}
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2200)}
 function fmt(t,cs=true){t=Math.max(0,t);const m=Math.floor(t/60),s=Math.floor(t%60),c=Math.floor((t%1)*100);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+(cs?'.'+String(c).padStart(2,'0'):'')}
 
@@ -974,7 +980,11 @@ let selKf=null; // set when a keyframe (not the whole clip) is the thing being w
 const kfSelected=s=>s&&selKf&&selKf.id===s.id&&s.kf&&kfAt(s,lt(sel.k,s));
 function del(){const s=getSel();if(!s)return;
   const h=kfSelected(s);if(h){commit();s.kf.splice(s.kf.indexOf(h),1);selKf=null;refresh();return toast('تم حذف الكي فريم')}
-  commit();if(sel.k==='tr'){delete s.tr;refresh();return}const a=list(sel.k);a.splice(a.indexOf(s),1);sel=null;seek(time);refresh()}
+  if(s.kf&&s.kf.length&&sel.k!=='tr'&&!del._ok){ // the clip has keyframes: make sure the whole clip is really meant
+    del._ok=true;const b=$('#del');b.textContent='متأكد؟ يحذف المقطع كامل';b.classList.add('warn');clearTimeout(del._h);
+    del._h=setTimeout(()=>{del._ok=false;b.classList.remove('warn');updBtns()},3500);toast('المؤشر مو على كي فريم. اضغط مرة ثانية لو تبي تحذف المقطع كامل');return}
+  del._ok=false;clearTimeout(del._h);$('#del').classList.remove('warn');
+  commit();if(sel.k==='tr'){delete s.tr;refresh();return}const a=list(sel.k);a.splice(a.indexOf(s),1);sel=null;seek(time);refresh();undoBar(sel===null&&s.text!=null?'تم حذف النص':'تم حذف المقطع')}
 function dup(){const s=getSel();if(!s||sel.k==='tr')return;commit();const a=list(sel.k),n={...JSON.parse(JSON.stringify(s)),id:uid()};
   if(sel.k==='t')n.start=s.start+s.dur;else if(sel.k==='a'||sel.k==='o')n.start=s.start+dur(s);
   a.splice(a.indexOf(s)+1,0,n);sel={k:sel.k,id:n.id};refresh()}
@@ -1214,7 +1224,7 @@ function previewAnim(t,end){const keep=sel;sel=null;seek(end?Math.max(t.start,t.
 document.getElementById('fontFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)addFont(f);e.target.value=''});
 function ratioBtns(){return Object.keys(RATIOS).map(r=>`<button data-ratio="${r}" class="${r===P.ratio?'on':''}">${r}</button>`).join('')}
 document.addEventListener('click',e=>{const r=e.target.closest('[data-ratio]');if(r){setRatio(r.dataset.ratio);refresh()}if(e.target.closest('[data-close]'))closeSheets()});
-function refresh(){renderTimeline();renderProps();updBtns();refreshInfo()}
+function refresh(){if(del._ok){del._ok=false;clearTimeout(del._h);$('#del').classList.remove('warn')}renderTimeline();renderProps();updBtns();refreshInfo()}
 function openSheet(id){if(matchMedia('(max-width:899px)').matches){closeSheets();$('#'+id).classList.add('open');$('#scrim').classList.add('open')}}
 function closeSheets(){document.querySelectorAll('.panel.open').forEach(p=>p.classList.remove('open'));$('#scrim').classList.remove('open')}
 $('#scrim').onclick=closeSheets;$('#mLib').onclick=()=>{libTab='files';renderLib();openSheet('lib')};
