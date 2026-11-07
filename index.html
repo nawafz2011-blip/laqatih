@@ -724,10 +724,10 @@ const ASR_WORKER=`let pipe=null,cur=null;
 const SR=16000;
 function cutPoint(a,i,L){const end=Math.min(a.length,i+L);if(end>=a.length)return end;const from=end-6*SR,W=320;let best=end,bv=1e9;
   for(let p=from;p<end-W;p+=W){let e=0;for(let j=p;j<p+W;j+=4)e+=a[j]*a[j];if(e<bv){bv=e;best=p+W/2}}return Math.floor(best)}
-self.onmessage=async e=>{const {model,audio}=e.data;try{
+self.onmessage=async e=>{const {model,audio}=e.data;try{postMessage({type:'stage',s:'lib'});
   const T=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2');T.env.allowLocalModels=false;
   if(!pipe||cur!==model){const prog=p=>{if(p.status==='progress'&&p.total)postMessage({type:'dl',p:p.progress})};
-    let dev='wasm';try{if(self.navigator&&navigator.gpu&&await navigator.gpu.requestAdapter())dev='webgpu'}catch(_){}
+    let dev='wasm';if(!e.data.mobile){try{const ad=self.navigator&&navigator.gpu&&await Promise.race([navigator.gpu.requestAdapter(),new Promise(r=>setTimeout(()=>r(null),3000))]);if(ad)dev='webgpu'}catch(_){}}
     let f16=false;if(dev==='webgpu'){try{const ad=await navigator.gpu.requestAdapter();f16=ad.features.has('shader-f16')}catch(_){}}
     const big=model.includes('large');
     try{pipe=await T.pipeline('automatic-speech-recognition',model,{device:dev,dtype:dev==='webgpu'?{encoder_model:big&&f16?'fp16':'fp32',decoder_model_merged:'q4'}:(big?'q4':'q8'),progress_callback:prog})}
@@ -740,9 +740,11 @@ self.onmessage=async e=>{const {model,audio}=e.data;try{
 const ASR_MODELS=[['onnx-community/whisper-base','⚡ سريع','~80MB · للتجربة السريعة'],['onnx-community/whisper-small','✓ دقيق','~250MB · ينفع لأغلب الفيديوهات'],['onnx-community/whisper-large-v3-turbo','★ الأدق','~600MB+ · أفضل سماع للعربي واللهجات · يحتاج كرت شاشة']];
 let asrOpt={model:'onnx-community/whisper-small',clean:true,split:true,kara:true};
 try{const o=JSON.parse(localStorage.getItem('laqta-asr')||'null');if(o)asrOpt={...asrOpt,...o}}catch(e){}
+const isPhone=()=>/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 function autoCaption(c,kind){
+  if(!c){layout();c=P.main.find(x=>(media.get(x.mid)||{}).type==='video');kind='m';if(!c)return toast('أضف فيديو فيه كلام أول')}
   const m=media.get(c.mid);if(!m||!m.file)return toast('ما لقينا صوت في هذا المقطع');
-  const gpu=!!navigator.gpu;if(!gpu&&asrOpt.model.includes('large'))asrOpt.model='onnx-community/whisper-small';
+  const gpu=!!navigator.gpu&&!isPhone();if(!gpu&&asrOpt.model.includes('large'))asrOpt.model='onnx-community/whisper-small';if(isPhone()&&!asrOpt.phoneSet){asrOpt.model='onnx-community/whisper-base';asrOpt.phoneSet=true}
   const draw=()=>{showOv(`<h2>📝 كتابة تلقائية</h2><p>اختر الدقة. كل ما زادت الدقة، يكتب أحسن ويحتاج وقت أكثر. الموديل يتحمّل أول مرة بس.</p>
     <div class="qopt">${ASR_MODELS.map(([k,n,d])=>`<button data-asr="${k}" class="${asrOpt.model===k?'on':''}" ${k.includes('large')&&!gpu?'disabled':''}><b>${n}</b><small>${k.includes('large')&&!gpu?'متصفحك ما يدعم كرت الشاشة. جرّب Chrome':d}</small></button>`).join('')}</div>
     <label class="ckl"><input type="checkbox" id="aClean" ${asrOpt.clean?'checked':''}> 🎧 نظّف الصوت قبل الكتابة (يرفع الصوت الواطي ويخفف الوشوشة)</label>
@@ -769,7 +771,9 @@ async function runAsr(c,kind,m,model){
   showOv(`<h2>📝 كتابة تلقائية</h2><div class="bar"><i id="asrBar" style="width:3%"></i></div><p id="asrMsg">جاري تجهيز الصوت…</p><div class="row"><button id="asrStop">إيقاف</button></div>`);
   const msg=t=>{const e=$('#asrMsg');if(e)e.textContent=t},bar=v=>{const e=$('#asrBar');if(e)e.style.width=v+'%'};
   const fail=t=>{msg('ما قدرنا نكمل الكتابة التلقائية. تشتغل على موقع GitHub وتطبيق الأندرويد، وتحتاج إنترنت أول مرة عشان يتحمّل الموديل.');
-    const st=$('#asrStop');if(st)st.remove();$('#ovCard').insertAdjacentHTML('beforeend',`<p class="hint" style="direction:ltr;font-family:var(--mono);font-size:11px;word-break:break-word">${esc(String(t).slice(0,300))}</p><div class="row"><button id="asrX">رجوع</button></div>`);$('#asrX').onclick=hideOv};
+    const st=$('#asrStop');if(st)st.remove();const info=`${String(t).slice(0,300)} | ${isPhone()?'phone':'desktop'} | ${inApp()?'app':'web'} | ${navigator.userAgent.slice(0,120)}`;
+    $('#ovCard').insertAdjacentHTML('beforeend',`<p class="hint" id="asrErr" style="direction:ltr;font-family:var(--mono);font-size:11px;word-break:break-word">${esc(String(t).slice(0,300))}</p><div class="row"><button id="asrCopy">📋 نسخ الخطأ</button><button id="asrX">رجوع</button></div>`);$('#asrX').onclick=hideOv;
+    $('#asrCopy').onclick=()=>{navigator.clipboard.writeText(info).then(()=>toast('تم نسخ الخطأ، الصقه في المحادثة')).catch(()=>{const r=document.createRange();r.selectNodeContents($('#asrErr'));getSelection().removeAllRanges();getSelection().addRange(r);toast('حدد النص وانسخه')})}};
   let audio;
   try{const ab=await new OfflineAudioContext(1,1,16000).decodeAudioData(await m.file.arrayBuffer());
     const full=asrOpt.clean?(msg('جاري تنظيف الصوت…'),await cleanAudio(ab)):ab.getChannelData(0);
@@ -784,6 +788,7 @@ async function runAsr(c,kind,m,model){
   asrJob=true;
   asrWorker.onmessage=e=>{const d=e.data;
     if(d.type==='dl'){bar(Math.max(3,d.p*.3));msg('تحميل الموديل… '+Math.round(d.p)+'%')}
+    else if(d.type==='stage'){msg('جاري تحميل أداة الكتابة…');bar(4)}
     else if(d.type==='ready'){bar(30);msg(`جاري سماع الكلام (${mins} دقيقة)… ${d.dev==='webgpu'?'باستخدام كرت الشاشة':'ممكن ياخذ عدة دقائق'}`)}
     else if(d.type==='chunk'){
       let list=d.chunks.map(x=>({...x,text:(x.text||'').trim()})).filter(x=>x.text&&!HALLU.test(x.text)&&loud(x.s,x.e)&&x.text!==lastText);
@@ -795,7 +800,7 @@ async function runAsr(c,kind,m,model){
     else if(d.type==='err'){asrWorker.terminate();asrWorker=null;if(added)finish();else fail(d.msg)}
   };
   asrWorker.onerror=e=>{if(asrWorker){asrWorker.terminate();asrWorker=null}fail(e.message||'worker error')};
-  asrWorker.postMessage({model,audio},[audio.buffer]);
+  asrWorker.postMessage({model,audio,mobile:isPhone()},[audio.buffer]);
 }
 const PRESETS=[
   ['عنوان',{font:'Cairo',weight:800,color:'#ffffff',stroke:0,shadow:.6,glow:false,bg:false}],
@@ -1115,10 +1120,10 @@ function placeClipBar(){
   let top=r.top-wr.top-bh-6;if(top<0)top=r.bottom-wr.top+6;b.style.top=top+'px';b.style.left=(cx-wr.left-bw/2)+'px';
 }
 const MT={
-  none:[['text','نص',()=>addText()],['music','صوت',()=>{libTab='sounds';renderLib();openSheet('lib')}],['mic','تسجيل',()=>toggleRec()],['speech','كتابة الكلام',()=>$('#capBtn').click()],['list','النصوص',()=>openCaps()],['layers','طبقة',()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة')}],['sticker','ستيكر',()=>{libTab='stickers';renderLib();openSheet('lib')}],['media','الوسائط',()=>{libTab='files';renderLib();openSheet('lib')}],['settings','المشروع',()=>openSheet('props')]],
-  m:[['cut','تقسيم',()=>split()],['speed','السرعة','السرعة'],['vol','الصوت','pVol'],['adjust','ضبط','فلتر'],['fx','تأثير','تأثيرات'],['crop','قص','قص الصورة'],['voice','مغيّر الصوت','مغيّر الصوت'],['mask','قناع','القناع'],['green','شاشة خضراء','الشاشة الخضراء'],['silence','حذف الصمت','حذف الأجزاء'],['speech','كتابة الكلام','كتابة تلقائية'],['extract','استخراج الصوت',()=>{const s=getSel();if(s)extractAudio(s)}],['move','التحريك','كي فريم وتحريك']],
+  none:[['text','نص',()=>addText()],['music','صوت',()=>{libTab='sounds';renderLib();openSheet('lib')}],['mic','تسجيل',()=>toggleRec()],['speech','كتابة الكلام',()=>autoCaption(null,'m')],['list','النصوص',()=>openCaps()],['layers','طبقة',()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة')}],['sticker','ستيكر',()=>{libTab='stickers';renderLib();openSheet('lib')}],['media','الوسائط',()=>{libTab='files';renderLib();openSheet('lib')}],['settings','المشروع',()=>openSheet('props')]],
+  m:[['cut','تقسيم',()=>split()],['speed','السرعة','السرعة'],['vol','الصوت','pVol'],['adjust','ضبط','فلتر'],['fx','تأثير','تأثيرات'],['crop','قص','قص الصورة'],['voice','مغيّر الصوت','مغيّر الصوت'],['mask','قناع','القناع'],['green','شاشة خضراء','الشاشة الخضراء'],['silence','حذف الصمت','حذف الأجزاء'],['speech','كتابة الكلام',()=>autoCaption(getSel(),sel.k)],['extract','استخراج الصوت',()=>{const s=getSel();if(s)extractAudio(s)}],['move','التحريك','كي فريم وتحريك']],
   t:[['cut','تقسيم',()=>split()],['font','الخط','font'],['style','التنسيق','style'],['anim','الحركة','anim'],['kf','كي فريم','kf']],
-  a:[['cut','تقسيم',()=>split()],['vol','الصوت','pVol'],['voice','مغيّر الصوت','مغيّر الصوت'],['speech','كتابة الكلام','كتابة تلقائية'],['silence','حذف الصمت','حذف الأجزاء'],['kf','كي فريم','كي فريم للصوت']]};
+  a:[['cut','تقسيم',()=>split()],['vol','الصوت','pVol'],['voice','مغيّر الصوت','مغيّر الصوت'],['speech','كتابة الكلام',()=>autoCaption(getSel(),sel.k)],['silence','حذف الصمت','حذف الأجزاء'],['kf','كي فريم','كي فريم للصوت']]};
 MT.o=MT.m.filter(x=>x[1]!=='استخراج الصوت');
 function openSec(key){
   if(sel&&sel.k==='t'&&['font','style','anim','kf'].includes(key)){$('#props')._tab=key;renderProps();openSheet('props');return}
