@@ -540,9 +540,9 @@ let masterEl=null;
 function sync(){
   const want=new Map(),mc=activeMain(time);masterEl=mc&&media.get(mc.mid)&&media.get(mc.mid).type==='video'?media.get(mc.mid):null;
   if(userSeek){if(!masterEl||(!masterEl.el.seeking&&Math.abs(masterEl.el.currentTime-mtime(mc,time-mc._s))<.3))userSeek=false}
-  if(mc){const m=media.get(mc.mid);if(m&&m.type==='video')want.set(m,{t:mtime(mc,time-mc._s),vol:mc.vol,rate:mc.speed||1,voice:mc.voice})}
-  for(const o of P.overlays){const m=media.get(o.mid);if(m&&m.type==='video'&&time>=o.start&&time<o.start+dur(o))want.set(oPlayer(o),{t:mtime(o,time-o.start),vol:o.vol,rate:o.speed||1,voice:o.voice})}
-  for(const a of P.audios){if(time>=a.start&&time<a.start+dur(a)&&media.get(a.mid)){const o=aPlayer(a),lt=time-a.start,e=a.start+dur(a)-time;let v=a.vol;if(a.fin>0)v*=Math.min(1,lt/a.fin);if(a.fout>0)v*=Math.min(1,e/a.fout);want.set(o,{t:mtime(a,lt),vol:v,rate:a.speed||1,voice:a.voice})}}
+  if(mc){const m=media.get(mc.mid);if(m&&m.type==='video')want.set(m,{t:mtime(mc,time-mc._s),vol:evalP(mc,time-mc._s).vol,rate:mc.speed||1,voice:mc.voice})}
+  for(const o of P.overlays){const m=media.get(o.mid);if(m&&m.type==='video'&&time>=o.start&&time<o.start+dur(o))want.set(oPlayer(o),{t:mtime(o,time-o.start),vol:evalP(o,time-o.start).vol,rate:o.speed||1,voice:o.voice})}
+  for(const a of P.audios){if(time>=a.start&&time<a.start+dur(a)&&media.get(a.mid)){const o=aPlayer(a),lt=time-a.start,e=a.start+dur(a)-time;let v=evalP(a,lt).vol;if(a.fin>0)v*=Math.min(1,lt/a.fin);if(a.fout>0)v*=Math.min(1,e/a.fout);want.set(o,{t:mtime(a,lt),vol:v,rate:a.speed||1,voice:a.voice})}}
   for(const m of players()){
     const el=m.el,w=want.get(m);
     if(!w){if(!el.paused)el.pause();continue}
@@ -556,7 +556,15 @@ function sync(){
 function wrapLines(t){return String(t.text||' ').split('\n')}
 /* ---------- keyframes & easing ---------- */
 const KP=['x','y','scale','rot','opacity'],KTOL=1/30;
-const pdef=(it,k)=>it[k]??(k==='scale'||k==='opacity'?1:0);
+// Everything else a keyframe can animate: any slider on a clip (nested paths like 'mask.w').
+const ANIMP=[['mask.x',.5],['mask.y',.5],['mask.w',.6],['mask.h',.6],['adj.b',1],['adj.c',1],['adj.s',1],['fxI',.7],['vol',1],['crop.l',0],['crop.t',0],['crop.r',0],['crop.b',0],['chroma.sim',.35],['chroma.smooth',.15]];
+const getP=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
+function setP(o,p,v){const ks=p.split('.'),last=ks.pop();let a=o;for(const k of ks){if(a[k]==null||typeof a[k]!=='object')a[k]={};a=a[k]}a[last]=v}
+const pdef=(it,k)=>{if(k.includes('.')||k==='fxI'||k==='vol'){const d=ANIMP.find(x=>x[0]===k);return getP(it,k)??(d?d[1]:0)}return it[k]??(k==='scale'||k==='opacity'?1:0)};
+const ALLP=[...KP,...ANIMP.map(x=>x[0])];
+function viewOf(c,V){if(!c.kf||!c.kf.length)return c;const g2=k=>V[k];
+  return{...c,vol:g2('vol'),fxI:g2('fxI'),adj:{b:g2('adj.b'),c:g2('adj.c'),s:g2('adj.s')},crop:{l:g2('crop.l'),t:g2('crop.t'),r:g2('crop.r'),b:g2('crop.b')},
+    mask:c.mask&&{...c.mask,x:g2('mask.x'),y:g2('mask.y'),w:g2('mask.w'),h:g2('mask.h')},chroma:c.chroma&&{...c.chroma,sim:g2('chroma.sim'),smooth:g2('chroma.smooth')}}}
 function bez(x1,y1,x2,y2){const cx=3*x1,bx=3*(x2-x1)-cx,ax=1-cx-bx,cy=3*y1,by=3*(y2-y1)-cy,ay=1-cy-by,X=t=>((ax*t+bx)*t+cx)*t,Y=t=>((ay*t+by)*t+cy)*t,dX=t=>(3*ax*t+2*bx)*t+cx;
   return x=>{if(x<=0)return 0;if(x>=1)return 1;let t=x;for(let i=0;i<8;i++){const d=dX(t);if(Math.abs(d)<1e-6)break;t-=(X(t)-x)/d}
     if(!(t>=0&&t<=1)||Math.abs(X(t)-x)>1e-3){let lo=0,hi=1;for(let i=0;i<30;i++){t=(lo+hi)/2;X(t)<x?lo=t:hi=t}}return Y(t)}}
@@ -566,14 +574,14 @@ const EASES={linear:['الأصلي',x=>x],ease:['Ease',bez(.25,.1,.25,1)],easeIn
   elastic:['Elastic',x=>x<=0||x>=1?x:Math.pow(2,-10*x)*Math.sin((x*10-.75)*2.094)+1],bounce:['Bounce',bounceFn],stutter:['تقطيع',x=>x+.12*Math.sin(x*Math.PI*4)],hold:['ثبات',x=>x<1?0:1]};
 const bezCache={};
 function easeFn(e){if(Array.isArray(e)){const k=e.join();return bezCache[k]||(bezCache[k]=bez(...e))}return(EASES[e]||EASES.linear)[1]}
-function evalP(it,t){const r={};KP.forEach(k=>r[k]=pdef(it,k));const K=it.kf;if(!K||!K.length)return r;
-  if(t<=K[0].t){KP.forEach(k=>r[k]=K[0][k]);return r}const L=K[K.length-1];if(t>=L.t){KP.forEach(k=>r[k]=L[k]);return r}
-  let i=0;while(i<K.length-1&&K[i+1].t<=t)i++;const a=K[i],b=K[i+1],e=easeFn(a.ease)((t-a.t)/(b.t-a.t));KP.forEach(k=>r[k]=a[k]+(b[k]-a[k])*e);return r}
+function evalP(it,t){const r={};ALLP.forEach(k=>r[k]=pdef(it,k));const K=it.kf;if(!K||!K.length)return r;const base={...r};
+  if(t<=K[0].t){ALLP.forEach(k=>r[k]=K[0][k]??base[k]);return r}const L=K[K.length-1];if(t>=L.t){ALLP.forEach(k=>r[k]=L[k]??base[k]);return r}
+  let i=0;while(i<K.length-1&&K[i+1].t<=t)i++;const a=K[i],b=K[i+1],e=easeFn(a.ease)((t-a.t)/(b.t-a.t));ALLP.forEach(k=>{const av=a[k]??base[k],bv=b[k]??base[k];r[k]=av+(bv-av)*e});return r}
 const itemDur=(k,it)=>k==='t'?it.dur:dur(it),itemStart=(k,it)=>k==='m'||k==='tr'?it._s:it.start;
 function lt(k,it){return clamp(time-itemStart(k,it),0,itemDur(k,it))}
 function kfAt(it,t){return(it.kf||[]).find(k=>Math.abs(k.t-t)<KTOL)}
 function addKf(it,t){let k=kfAt(it,t);if(k)return k;const prev=segKf(it,t);k={t:+t.toFixed(3),...evalP(it,t),ease:prev?prev.k.ease:'linear'};it.kf=it.kf||[];it.kf.push(k);it.kf.sort((a,b)=>a.t-b.t);return k}
-function setProp(it,kind,k,v){if(it.kf&&it.kf.length)addKf(it,lt(kind,it))[k]=v;else it[k]=v}
+function setProp(it,kind,k,v){if(it.kf&&it.kf.length)addKf(it,lt(kind,it))[k]=v;else if(k.includes('.'))setP(it,k,v);else it[k]=v}
 function segKf(it,t){const K=it.kf;if(!K||K.length<2)return null;let i=0;while(i<K.length-2&&K[i+1].t<=t+1e-6)i++;return{k:K[i],i}}
 const cpath=f=>{let d='';for(let i=0;i<=40;i++){const x=i/40;d+=(i?'L':'M')+(x*100).toFixed(1)+' '+(100-f(x)*100).toFixed(1)}return d};
 function kfPanel(it,kind){
@@ -585,9 +593,9 @@ function kfPanel(it,kind){
       <button data-ease="custom" class="${custom?'on':''}"><svg viewBox="-12 -30 124 160"><g stroke="currentColor" stroke-width="7" stroke-linecap="round"><line x1="10" y1="20" x2="90" y2="20"/><line x1="10" y1="50" x2="90" y2="50"/><line x1="10" y1="80" x2="90" y2="80"/></g><g fill="currentColor"><circle cx="65" cy="20" r="11"/><circle cx="35" cy="50" r="11"/><circle cx="60" cy="80" r="11"/></g></svg><small>مخصص</small></button></div>
       ${custom?`<svg id="cEd" viewBox="-15 -40 130 180"></svg><p class="hint" style="text-align:center;direction:ltr;margin:0 0 10px;font-family:var(--mono);font-size:11px">${e.map(x=>x.toFixed(2)).join(' , ')}</p>`:''}`}
   return `<div class="kfbar"><button id="kfPrev" title="الكي فريم السابق">◀◆</button><button id="kfTog" class="${here?'':'primary'}">${here?'◇ حذف الكي فريم':'◆ إضافة كي فريم'}</button><button id="kfNext" title="الكي فريم التالي">◆▶</button></div>
-  <p class="hint" style="margin-top:0">${n?`${n} كي فريم. أي تعديل في وقت ما فيه كي فريم يضيف واحد جديد تلقائياً.`:'حط المؤشر على وقت واضغط «إضافة كي فريم»، وبعدين روح لوقت ثاني وغيّر المكان أو الحجم أو الدوران.'}</p>
-  ${r('kX','أفقي',isT?0:-1,1,.005,v.x,Math.round(v.x*100)+'%')}${r('kY','رأسي',isT?0:-1,1,.005,v.y,Math.round(v.y*100)+'%')}
-  ${r('kS','الحجم',.1,4,.01,v.scale,Math.round(v.scale*100)+'%')}${r('kR','الدوران',-360,360,1,v.rot,Math.round(v.rot)+'°')}${r('kO','الشفافية',0,1,.01,v.opacity,Math.round(v.opacity*100)+'%')}${cur}`;
+  <p class="hint" style="margin-top:0">${n?`${n} كي فريم. أي شريط تغيّره (المكان، الحجم، الصوت، القناع، الفلتر، التأثير، القص، الشاشة الخضراء) في وقت ما فيه كي فريم يضيف واحد جديد تلقائياً.`:'حط المؤشر على وقت واضغط «إضافة كي فريم»، وبعدين روح لوقت ثاني وغيّر المكان أو الحجم أو الدوران.'}</p>
+  ${kind==='a'?'':`${r('kX','أفقي',isT?0:-1,1,.005,v.x,Math.round(v.x*100)+'%')}${r('kY','رأسي',isT?0:-1,1,.005,v.y,Math.round(v.y*100)+'%')}
+  ${r('kS','الحجم',.1,4,.01,v.scale,Math.round(v.scale*100)+'%')}${r('kR','الدوران',-360,360,1,v.rot,Math.round(v.rot)+'°')}${r('kO','الشفافية',0,1,.01,v.opacity,Math.round(v.opacity*100)+'%')}`}${cur}`;
 }
 function bindKf(it,kind){
   const el=$('#props');if(!$('#kfTog'))return;
@@ -596,7 +604,7 @@ function bindKf(it,kind){
   $('#kfPrev').onclick=()=>go(-1);$('#kfNext').onclick=()=>go(1);
   let c=0;const once=()=>{if(!c){commit();c=1}};
   [['kX','x',v=>Math.round(v*100)+'%'],['kY','y',v=>Math.round(v*100)+'%'],['kS','scale',v=>Math.round(v*100)+'%'],['kR','rot',v=>Math.round(v)+'°'],['kO','opacity',v=>Math.round(v*100)+'%']].forEach(([id,k,f])=>{
-    const r=$('#'+id);r.addEventListener('pointerdown',once);r.addEventListener('input',e=>{once();setProp(it,kind,k,+e.target.value);$('#'+id+'V').textContent=f(+e.target.value)});r.addEventListener('change',()=>{c=0;refresh()})});
+    const r=$('#'+id);if(!r)return;r.addEventListener('pointerdown',once);r.addEventListener('input',e=>{once();setProp(it,kind,k,+e.target.value);$('#'+id+'V').textContent=f(+e.target.value)});r.addEventListener('change',()=>{c=0;refresh()})});
   el.querySelectorAll('[data-ease]').forEach(b=>b.onclick=()=>{const s=segKf(it,lt(kind,it));if(!s)return;commit();const e=b.dataset.ease;s.k.ease=e==='custom'?(Array.isArray(s.k.ease)?s.k.ease:[.25,.1,.25,1]):e;renderProps()});
   const ed=$('#cEd');if(!ed)return;const s=segKf(it,lt(kind,it)),E=s.k.ease;
   const P2=(x,y)=>[x*100,100-y*100];
@@ -767,7 +775,7 @@ function draw(){
   const W=cv.width/PX,H=cv.height/PX,mc=activeMain(time),m=mc&&media.get(mc.mid);
   if(m&&m.type==='video'&&m.el.readyState<2)return; // keep last frame while seeking
   g.setTransform(PX,0,0,PX,0,0);g.fillStyle='#000';g.fillRect(0,0,W,H);
-  if(m){const V=evalP(mc,time-mc._s);drawMedia(mc,m.el,W/2+V.x*W,H/2+V.y*H,V,W,H,true);fxPost(mc,W,H)}
+  if(m){const V=evalP(mc,time-mc._s),mv=viewOf(mc,V);drawMedia(mv,m.el,W/2+V.x*W,H/2+V.y*H,V,W,H,true);fxPost(mv,W,H)}
   if(mc)drawTransitions(mc,W,H);
   drawOverlays(W,H);
   for(const t of P.texts){
@@ -860,7 +868,7 @@ function keyedSource(c,s,sx,sy,sw,sh){ // green-screen: drop pixels near the key
 function drawOverlays(W,H){
   for(const o of P.overlays){o._box=null;if(time<o.start||time>=o.start+dur(o))continue;const m=media.get(o.mid);if(!m)continue;
     const el=m.type==='image'?m.el:oPlayer(o).el;if(m.type==='video'&&el.readyState<2)continue;
-    const V=evalP(o,time-o.start),d=drawMedia(o,el,V.x*W,V.y*H,V,W,H,false);if(!d)continue;
+    const V=evalP(o,time-o.start),d=drawMedia(viewOf(o,V),el,V.x*W,V.y*H,V,W,H,false);if(!d)continue;
     o._box={x:V.x*W-d.dw/2,y:V.y*H-d.dh/2,w:d.dw,h:d.dh};
     if(!exporting&&sel&&sel.k==='o'&&sel.id===o.id){g.save();g.setLineDash([10,7]);g.strokeStyle='#7c5cff';g.lineWidth=3;g.strokeRect(o._box.x,o._box.y,o._box.w,o._box.h);g.restore()}
   }
@@ -981,7 +989,7 @@ function renderTimeline(){
   $('#laneO').innerHTML=P.overlays.map(o=>{const m=media.get(o.mid)||{};return `<div class="clip v ovc${cls('o',o.id)}" data-k="o" data-id="${o.id}" style="left:${o.start*pps}px;width:${dur(o)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(o,'o')}<span class="lbl">⧉ ${esc(m.name||'')}</span></div>`}).join('')||'<div class="empty-lane">اضغط ⧉ على فيديو أو صورة في الوسائط عشان تحطها فوق الفيديو</div>';
   $('#laneT').innerHTML=P.texts.map(t=>`<div class="clip t${cls('t',t.id)}" data-k="t" data-id="${t.id}" style="left:${t.start*pps}px;width:${t.dur*pps}px">${hd}${kd(t,'t')}<span class="lbl">${esc(t.text)}</span></div>`).join('');
   const ends=[];[...P.audios].sort((a,b)=>a.start-b.start).forEach(a=>{let r=ends.findIndex(e=>e<=a.start+.01);if(r<0)r=ends.length<3?ends.length:2;ends[r]=a.start+dur(a);a._row=r});const R=Math.max(1,ends.length);
-  $('#laneA').innerHTML=P.audios.map(a=>{const m=media.get(a.mid)||{};return `<div class="clip a${cls('a',a.id)}" data-k="a" data-id="${a.id}" style="top:calc(${a._row}*100%/${R});height:calc(100%/${R} - ${R>1?2:0}px);bottom:auto;left:${a.start*pps}px;width:${dur(a)*pps}px;background-image:url('${m.wave||''}');background-size:${(m.duration||1)/(a.speed||1)*pps}px 70%;background-position:${-a.in/(a.speed||1)*pps}px center">${hd}<span class="lbl">♫ ${esc(m.name||'')}</span></div>`}).join('');
+  $('#laneA').innerHTML=P.audios.map(a=>{const m=media.get(a.mid)||{};return `<div class="clip a${cls('a',a.id)}" data-k="a" data-id="${a.id}" style="top:calc(${a._row}*100%/${R});height:calc(100%/${R} - ${R>1?2:0}px);bottom:auto;left:${a.start*pps}px;width:${dur(a)*pps}px;background-image:url('${m.wave||''}');background-size:${(m.duration||1)/(a.speed||1)*pps}px 70%;background-position:${-a.in/(a.speed||1)*pps}px center">${hd}${kd(a,'a')}<span class="lbl">♫ ${esc(m.name||'')}</span></div>`}).join('');
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 let drag=null;
@@ -1137,8 +1145,8 @@ function renderProps(){
     $('#pTrAll').onclick=()=>{commit();P.main.slice(0,-1).forEach(c=>c.tr={...tr});refresh();toast('تم تطبيق الانتقال على الكل')};
     return}
   const m=media.get(s.mid)||{};
-  const vis=sel.k==='m'||sel.k==='o',isVid=m.type==='video';
-  const vol=m.type==='image'?'':`<div class="field"><label for="pVol">الصوت · <span id="pVolV">${Math.round(s.vol*100)}%</span></label><input type="range" id="pVol" min="0" max="2" step="0.05" value="${s.vol}"></div>`;
+  const vis=sel.k==='m'||sel.k==='o',isVid=m.type==='video',KV=evalP(s,lt(sel.k,s)),gv=(p,d)=>KV[p]??d;
+  const vol=m.type==='image'?'':`<div class="field"><label for="pVol">الصوت · <span id="pVolV">${Math.round(gv('vol',1)*100)}%</span></label><input type="range" id="pVol" min="0" max="2" step="0.05" value="${gv('vol',1)}"></div>`;
   el.innerHTML=`<h3>${sel.k==='a'?'خصائص الصوت':sel.k==='o'?'خصائص الطبقة':m.type==='image'?'خصائص الصورة':'خصائص الفيديو'} ${x}</h3>
     <p class="hint" style="margin-top:0">${esc(m.name||'')} · ${dur(s).toFixed(2)} ثانية</p>${vol}
     ${sel.k==='m'?`<div class="field"><span class="lab">الملاءمة</span><div class="seg"><button data-fit="contain" class="${s.fit!=='cover'?'on':''}">احتواء</button><button data-fit="cover" class="${s.fit==='cover'?'on':''}">ملء الشاشة</button><button data-fit="blur" class="${s.fit==='blur'?'on':''}">🎨 خلفية ضبابية</button></div></div>`:''}
@@ -1151,47 +1159,49 @@ function renderProps(){
     <div class="field"><label for="slMin">أقل مدة للصمت · <span id="slMinV">${silMin.toFixed(2)} ث</span></label><input type="range" id="slMin" min="0.1" max="2" step="0.05" value="${silMin}"></div>
     <canvas id="slViz" class="slviz"></canvas><p class="hint" id="slInfo">جاري تحليل الصوت…</p><button id="slGo" class="primary" disabled>✂ احذف الأجزاء الهادئة</button>`:''}
     ${vis?`<h4 class="sec">🌀 تأثيرات</h4><div class="chips">${FX.map(([k,n])=>`<button data-fx="${k}" class="${(s.fx||'none')===k?'on':''}">${n}</button>`).join('')}</div>
-    ${s.fx&&s.fx!=='none'?`<div class="field" style="margin-top:10px"><label for="pFxI">القوة · <span id="pFxIV">${Math.round((s.fxI??.7)*100)}%</span></label><input type="range" id="pFxI" min="0.1" max="1" step="0.05" value="${s.fxI??.7}"></div>`:''}
+    ${s.fx&&s.fx!=='none'?`<div class="field" style="margin-top:10px"><label for="pFxI">القوة · <span id="pFxIV">${Math.round(gv('fxI',.7)*100)}%</span></label><input type="range" id="pFxI" min="0.1" max="1" step="0.05" value="${gv('fxI',.7)}"></div>`:''}
     <h4 class="sec">✂️ قص الصورة وقلبها</h4><div class="row" style="margin-bottom:10px"><button data-flip="flipH" class="${s.flipH?'primary':''}">⇋ قلب أفقي</button><button data-flip="flipV" class="${s.flipV?'primary':''}">⇵ قلب رأسي</button><button id="cropReset">إلغاء القص</button></div>
-    ${[['cT','t','من فوق'],['cB','b','من تحت'],['cR','r','من اليمين'],['cL','l','من اليسار']].map(([id,k,n])=>`<div class="field"><label for="${id}">قص ${n} · <span id="${id}V">${Math.round(((s.crop||{})[k]||0)*100)}%</span></label><input type="range" id="${id}" data-crop="${k}" min="0" max="0.45" step="0.01" value="${(s.crop||{})[k]||0}"></div>`).join('')}`:''}
+    ${[['cT','t','من فوق'],['cB','b','من تحت'],['cR','r','من اليمين'],['cL','l','من اليسار']].map(([id,k,n])=>`<div class="field"><label for="${id}">قص ${n} · <span id="${id}V">${Math.round(gv('crop.'+k,0)*100)}%</span></label><input type="range" id="${id}" data-crop="${k}" min="0" max="0.45" step="0.01" value="${gv('crop.'+k,0)}"></div>`).join('')}`:''}
     ${vis?`<h4 class="sec">🟩 الشاشة الخضراء</h4><label class="ckl"><input type="checkbox" id="ckOn" ${s.chroma&&s.chroma.on?'checked':''}> شيل الخلفية الخضراء أو الزرقاء من هذا المقطع</label>
     ${s.chroma&&s.chroma.on?`<div class="field"><span class="lab">لون الخلفية</span><div class="sw">${['#00ff00','#00b140','#0047bb','#ffffff'].map(c=>`<button data-ckc="${c}" class="${(s.chroma.color||'#00ff00')===c?'on':''}" style="background:${c}" aria-label="${c}"></button>`).join('')}<input type="color" id="ckColor" value="${s.chroma.color||'#00ff00'}" aria-label="لون مخصص"></div></div>
-    <div class="field"><label for="ckSim">قوة الإزالة · <span id="ckSimV">${Math.round((s.chroma.sim??.35)*100)}%</span></label><input type="range" id="ckSim" min="0.05" max="1" step="0.01" value="${s.chroma.sim??.35}"></div>
-    <div class="field"><label for="ckSm">نعومة الحواف · <span id="ckSmV">${Math.round((s.chroma.smooth??.15)*100)}%</span></label><input type="range" id="ckSm" min="0.01" max="0.6" step="0.01" value="${s.chroma.smooth??.15}"></div>`:''}
+    <div class="field"><label for="ckSim">قوة الإزالة · <span id="ckSimV">${Math.round(gv('chroma.sim',.35)*100)}%</span></label><input type="range" id="ckSim" min="0.05" max="1" step="0.01" value="${gv('chroma.sim',.35)}"></div>
+    <div class="field"><label for="ckSm">نعومة الحواف · <span id="ckSmV">${Math.round(gv('chroma.smooth',.15)*100)}%</span></label><input type="range" id="ckSm" min="0.01" max="0.6" step="0.01" value="${gv('chroma.smooth',.15)}"></div>`:''}
     <h4 class="sec">🖌 القناع (Mask)</h4><div class="chips">${[['none','بدون'],['circle','⬤ دائرة'],['rect','■ مستطيل'],['round','▢ مدوّر'],['heart','♥ قلب'],['star','★ نجمة']].map(([k,n])=>`<button data-mask="${k}" class="${((s.mask||{}).type||'none')===k?'on':''}">${n}</button>`).join('')}</div>
-    ${s.mask&&s.mask.type&&s.mask.type!=='none'?`<div style="margin-top:10px">${[['mkW','w','العرض',.05,1.5],['mkH','h','الارتفاع',.05,1.5],['mkX','x','أفقي',0,1],['mkY','y','رأسي',0,1]].map(([id,k,n,mn,mx])=>`<div class="field"><label for="${id}">${n} · <span id="${id}V">${Math.round((s.mask[k]??(k==='w'||k==='h'?.6:.5))*100)}%</span></label><input type="range" id="${id}" data-mk="${k}" min="${mn}" max="${mx}" step="0.01" value="${s.mask[k]??(k==='w'||k==='h'?.6:.5)}"></div>`).join('')}<label class="ckl"><input type="checkbox" id="mkInv" ${s.mask.inv?'checked':''}> اعكس القناع (اخفي اللي داخل الشكل)</label></div>`:''}
+    ${s.mask&&s.mask.type&&s.mask.type!=='none'?`<div style="margin-top:10px">${[['mkW','w','العرض',.05,1.5],['mkH','h','الارتفاع',.05,1.5],['mkX','x','أفقي',0,1],['mkY','y','رأسي',0,1]].map(([id,k,n,mn,mx])=>`<div class="field"><label for="${id}">${n} · <span id="${id}V">${Math.round(gv('mask.'+k,k==='w'||k==='h'?.6:.5)*100)}%</span></label><input type="range" id="${id}" data-mk="${k}" min="${mn}" max="${mx}" step="0.01" value="${gv('mask.'+k,k==='w'||k==='h'?.6:.5)}"></div>`).join('')}<label class="ckl"><input type="checkbox" id="mkInv" ${s.mask.inv?'checked':''}> اعكس القناع (اخفي اللي داخل الشكل)</label></div>`:''}
     <h4 class="sec">◐ فلتر</h4><div class="flgrid">${FILTERS.map(([k,n,f])=>`<button data-flt="${k}" class="${(s.filter||'none')===k?'on':''}"><span style="background-image:url('${m.thumb||''}');filter:${f||'none'}"></span>${n}</button>`).join('')}</div>
-    ${[['aB','b','السطوع',.3,1.8],['aC','c','التباين',.3,1.8],['aS','s','التشبع',0,2.5]].map(([id,k,n,mn,mx])=>`<div class="field"><label for="${id}">${n} · <span id="${id}V">${Math.round(((s.adj||{})[k]??1)*100)}%</span></label><input type="range" id="${id}" data-adj="${k}" min="${mn}" max="${mx}" step="0.01" value="${(s.adj||{})[k]??1}"></div>`).join('')}
+    ${[['aB','b','السطوع',.3,1.8],['aC','c','التباين',.3,1.8],['aS','s','التشبع',0,2.5]].map(([id,k,n,mn,mx])=>`<div class="field"><label for="${id}">${n} · <span id="${id}V">${Math.round(gv('adj.'+k,1)*100)}%</span></label><input type="range" id="${id}" data-adj="${k}" min="${mn}" max="${mx}" step="0.01" value="${gv('adj.'+k,1)}"></div>`).join('')}
     <h4 class="sec">◆ كي فريم وتحريك المقطع</h4>${kfPanel(s,sel.k)}`:''}
     ${sel.k==='m'&&m.type==='video'?`<div class="field"><button id="pExt">♫ استخراج الصوت</button><p class="hint" style="margin:6px 0 0">ينقل صوت المقطع لمسار الصوت ويكتم الأصلي، عشان تقصه أو تحركه لحاله.</p></div>`:''}
+    ${sel.k==='a'?`<h4 class="sec">◆ كي فريم للصوت</h4>${kfPanel(s,'a')}`:''}
     ${sel.k==='a'?`<div class="field"><label for="pFin">ظهور تدريجي · <span id="pFinV">${(s.fin||0).toFixed(1)} ث</span></label><input type="range" id="pFin" min="0" max="${Math.min(5,dur(s)/2).toFixed(1)}" step="0.1" value="${s.fin||0}"></div>
     <div class="field"><label for="pFout">اختفاء تدريجي · <span id="pFoutV">${(s.fout||0).toFixed(1)} ث</span></label><input type="range" id="pFout" min="0" max="${Math.min(5,dur(s)/2).toFixed(1)}" step="0.1" value="${s.fout||0}"></div>`:''}
     <p class="hint">اسحب أطراف المقطع في الخط الزمني عشان تقصّه${sel.k==='m'?'، واسحبه كامل عشان تغيّر ترتيبه':''}.</p>`;
   let c=0;const once=()=>{if(!c){commit();c=1}};
-  const pv=$('#pVol');if(pv){pv.addEventListener('pointerdown',once);pv.addEventListener('input',e=>{once();s.vol=+e.target.value;$('#pVolV').textContent=Math.round(s.vol*100)+'%'})}
+  const pv=$('#pVol');if(pv){pv.addEventListener('pointerdown',once);pv.addEventListener('input',e=>{once();setProp(s,sel.k,'vol',+e.target.value);$('#pVolV').textContent=Math.round(e.target.value*100)+'%'})}
   el.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{commit();s.fit=b.dataset.fit;renderProps()});
   const px=$('#pExt');if(px)px.onclick=()=>extractAudio(s);
-  if(vis)bindKf(s,sel.k);
+  if(vis||sel.k==='a')bindKf(s,sel.k);
+  el.onchange=e=>{if(e.target.type==='range'&&s.kf&&s.kf.length)renderTimeline()};
   const ko=$('#ckOn');if(ko)ko.onchange=e=>{commit();s.chroma={color:'#00ff00',sim:.35,smooth:.15,...(s.chroma||{}),on:e.target.checked};renderProps()};
   el.querySelectorAll('[data-ckc]').forEach(b=>b.onclick=()=>{commit();s.chroma={...s.chroma,color:b.dataset.ckc};renderProps()});
   const kc=$('#ckColor');if(kc)kc.addEventListener('input',e=>{once();s.chroma={...s.chroma,color:e.target.value}});
-  [['ckSim','sim'],['ckSm','smooth']].forEach(([id,k])=>{const rg=$('#'+id);if(!rg)return;rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();s.chroma={...s.chroma,[k]:+e.target.value};$('#'+id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
+  [['ckSim','sim'],['ckSm','smooth']].forEach(([id,k])=>{const rg=$('#'+id);if(!rg)return;rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();setProp(s,sel.k,'chroma.'+k,+e.target.value);$('#'+id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
   el.querySelectorAll('[data-mask]').forEach(b=>b.onclick=()=>{commit();s.mask={w:.6,h:.6,x:.5,y:.5,...(s.mask||{}),type:b.dataset.mask};if(b.dataset.mask==='circle'||b.dataset.mask==='heart'||b.dataset.mask==='star'){const mm=media.get(s.mid),e2=mm&&mm.el,ar=e2?((e2.videoWidth||e2.naturalWidth||1)/(e2.videoHeight||e2.naturalHeight||1)):1;s.mask.h=clamp(s.mask.w*ar,.05,1.5)}renderProps()});
-  el.querySelectorAll('[data-mk]').forEach(rg=>{rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();s.mask={...s.mask,[rg.dataset.mk]:+e.target.value};$('#'+rg.id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
+  el.querySelectorAll('[data-mk]').forEach(rg=>{rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();setProp(s,sel.k,'mask.'+rg.dataset.mk,+e.target.value);$('#'+rg.id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
   const mi=$('#mkInv');if(mi)mi.onchange=e=>{commit();s.mask={...s.mask,inv:e.target.checked}};
   el.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>{commit();s.voice=b.dataset.voice;ensureAudio();renderProps();
     if(!playing&&s.voice!=='none'){const st=itemStart(sel.k,s);if(time<st||time>=st+dur(s)-.5)seek(st);play();setTimeout(()=>{if(playing&&!exporting)pause()},2500)}});
   const pc=$('#pCap');if(pc)pc.onclick=()=>autoCaption(s,sel.k);
   el.querySelectorAll('[data-fx]').forEach(b=>b.onclick=()=>{commit();s.fx=b.dataset.fx;renderProps()});
-  const fi=$('#pFxI');if(fi){fi.addEventListener('pointerdown',once);fi.addEventListener('input',e=>{once();s.fxI=+e.target.value;$('#pFxIV').textContent=Math.round(s.fxI*100)+'%'})}
+  const fi=$('#pFxI');if(fi){fi.addEventListener('pointerdown',once);fi.addEventListener('input',e=>{once();setProp(s,sel.k,'fxI',+e.target.value);$('#pFxIV').textContent=Math.round(e.target.value*100)+'%'})}
   el.querySelectorAll('[data-flip]').forEach(b=>b.onclick=()=>{commit();s[b.dataset.flip]=!s[b.dataset.flip];renderProps()});
   const crr=$('#cropReset');if(crr)crr.onclick=()=>{commit();delete s.crop;renderProps()};
-  el.querySelectorAll('[data-crop]').forEach(rg=>{rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();s.crop={...(s.crop||{}),[rg.dataset.crop]:+e.target.value};$('#'+rg.id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
+  el.querySelectorAll('[data-crop]').forEach(rg=>{rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();setProp(s,sel.k,'crop.'+rg.dataset.crop,+e.target.value);$('#'+rg.id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
   if($('#slThr')&&(sel.k==='a'||sel.k==='m')){$('#slThr').oninput=e=>{silThr=+e.target.value;$('#slThrV').textContent=silThr+' dB';silencePanel(s,sel.k)};$('#slMin').oninput=e=>{silMin=+e.target.value;$('#slMinV').textContent=silMin.toFixed(2)+' ث';silencePanel(s,sel.k)};silencePanel(s,sel.k)}
   el.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{commit();s.speed=+b.dataset.sp;refresh()});
   const sp=$('#pSp');if(sp){sp.addEventListener('pointerdown',once);sp.addEventListener('input',e=>{once();s.speed=+e.target.value;$('#pSpV').textContent=s.speed+'x';renderTimeline()});sp.addEventListener('change',()=>refresh())}
   el.querySelectorAll('[data-flt]').forEach(b=>b.onclick=()=>{commit();s.filter=b.dataset.flt;renderProps()});
-  el.querySelectorAll('[data-adj]').forEach(r=>{r.addEventListener('pointerdown',once);r.addEventListener('input',e=>{once();s.adj={...(s.adj||{}),[r.dataset.adj]:+e.target.value};$('#'+r.id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
+  el.querySelectorAll('[data-adj]').forEach(r=>{r.addEventListener('pointerdown',once);r.addEventListener('input',e=>{once();setProp(s,sel.k,'adj.'+r.dataset.adj,+e.target.value);$('#'+r.id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
   [['pFin','fin'],['pFout','fout']].forEach(([id,k])=>{const r=$('#'+id);if(!r)return;r.addEventListener('pointerdown',once);r.addEventListener('input',e=>{once();s[k]=+e.target.value;$('#'+id+'V').textContent=s[k].toFixed(1)+' ث'})});
   const pd=$('#pDur');if(pd)pd.onchange=e=>{commit();s.out=s.in+Math.max(.2,+e.target.value||3);refresh()};
 }
@@ -1222,7 +1232,7 @@ $('#play').onclick=()=>playing?pause():play();
 $('#toStart').onclick=()=>seek(0);$('#back').onclick=()=>seek(time-1);$('#fwd').onclick=()=>seek(time+1);
 $('#addText').onclick=addText;
 $('#kfBtn').onclick=kfToggle;
-function kfToggle(){const s=getSel();if(!s||sel.k==='a')return toast('اختر نص أو مقطع فيديو أول');commit();const t=lt(sel.k,s),h=kfAt(s,t);if(h){s.kf.splice(s.kf.indexOf(h),1);toast('تم حذف الكي فريم')}else{addKf(s,t);toast('تمت إضافة كي فريم ◆')}if(sel.k==='t')$('#props')._tab='kf';refresh();openSheet('props')}
+function kfToggle(){const s=getSel();if(!s||sel.k==='tr')return toast('اختر نص أو مقطع أول');commit();const t=lt(sel.k,s),h=kfAt(s,t);if(h){s.kf.splice(s.kf.indexOf(h),1);toast('تم حذف الكي فريم')}else{addKf(s,t);toast('تمت إضافة كي فريم ◆')}if(sel.k==='t')$('#props')._tab='kf';refresh();openSheet('props')}
 function applyTheme(th){document.documentElement.setAttribute('data-theme',th);const b=$('#themeBtn');b.textContent=th==='dark'?'☀':'☾';b.title=th==='dark'?'الوضع الصباحي':'الوضع الليلي'}
 {let th0=null;try{th0=localStorage.getItem('laqta-theme')}catch(e){}applyTheme(th0||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'))}
 $('#themeBtn').onclick=()=>{const n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';applyTheme(n);try{localStorage.setItem('laqta-theme',n)}catch(e){}};$('#split').onclick=split;$('#del').onclick=del;$('#dup').onclick=dup;$('#undo').onclick=undo;$('#redo').onclick=redo;
@@ -1284,8 +1294,9 @@ async function renderAudioOffline(T){ // mix every sound offline (volume, fades,
   const sr=48000,oc=new OfflineAudioContext(2,Math.max(1,Math.ceil(T*sr)),sr);let ready=false;
   try{await oc.audioWorklet.addModule(URL.createObjectURL(new Blob([PITCH_SRC],{type:'application/javascript'})));ready=true}catch(e){}
   const cache=new Map(),dec=async f=>{if(!f)return null;if(!cache.has(f)){let b=null;try{b=await oc.decodeAudioData(await f.arrayBuffer())}catch(e){}cache.set(f,b)}return cache.get(f)};
-  const place=async(c,st,file,vol,voice,fin,fout)=>{const b=await dec(file);if(!b||!(vol>0))return;const src=oc.createBufferSource(),gn=oc.createGain(),d=dur(c);src.buffer=b;src.playbackRate.value=c.speed||1;
-    gn.gain.setValueAtTime(fin>0?0:vol,st);if(fin>0)gn.gain.linearRampToValueAtTime(vol,st+fin);if(fout>0){gn.gain.setValueAtTime(vol,Math.max(st,st+d-fout));gn.gain.linearRampToValueAtTime(0,st+d)}
+  const place=async(c,st,file,vol,voice,fin,fout)=>{const b=await dec(file);if(!b)return;const hasK=c.kf&&c.kf.length;if(!(vol>0)&&!(hasK&&c.kf.some(k=>k.vol>0)))return;const src=oc.createBufferSource(),gn=oc.createGain(),d=dur(c);src.buffer=b;src.playbackRate.value=c.speed||1;
+    const gAt=t=>{let v=hasK?evalP(c,t).vol:vol;if(fin>0)v*=Math.min(1,t/fin);if(fout>0)v*=Math.min(1,(d-t)/fout);return Math.max(0,v)};
+    gn.gain.setValueAtTime(gAt(0),st);if(hasK||fin>0||fout>0)for(let t=.05;t<=d+1e-6;t+=.05)gn.gain.linearRampToValueAtTime(gAt(Math.min(t,d)),st+t);
     const v=voice&&voice!=='none'?buildVoice(voice,oc,ready):null;if(v&&v.input){src.connect(v.input);v.output.connect(gn)}else src.connect(gn);gn.connect(oc.destination);
     src.start(st,c.in,Math.max(.01,c.out-c.in))};
   layout();
