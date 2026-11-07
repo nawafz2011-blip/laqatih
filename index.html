@@ -120,6 +120,8 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .stk{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
 .stk button{font-size:24px;justify-content:center;padding:6px 0;border-radius:10px}
 #pSp{margin:8px 0 4px}
+#recPill{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#ff3b5c;color:#fff;border:0;border-radius:20px;padding:7px 16px;font-weight:700;z-index:5;box-shadow:0 6px 18px #ff3b5c66;animation:recP 1.3s ease-in-out infinite}
+@keyframes recP{50%{box-shadow:0 0 0 8px #ff3b5c22}}
 .slviz{display:block;width:100%;height:60px;background:var(--panel2);border-radius:8px;border:1px solid var(--line)}
 .item .ovl{position:absolute;bottom:4px;right:30px;width:22px;height:22px;border-radius:6px;background:var(--accent2);color:#04261d;display:grid;place-items:center;font-weight:800}
 .clip.ovc{border-color:#22d3a6aa}
@@ -302,6 +304,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
       <button class="mob" id="mLib">▣ الوسائط</button>
       <button id="addText">T نص</button>
       <button id="addSound">♫ صوت</button>
+      <button id="recBtn2">🎙 تسجيل</button>
       <button id="addStk">✿ ستيكر</button>
       <button id="addOv">⧉ طبقة</button>
       <button id="capBtn">📝 كتابة تلقائية</button>
@@ -466,17 +469,21 @@ async function extractAudio(c){
   commit();layout();const a={id:uid(),mid:am.id,start:c._s,in:c.in,out:c.out,vol:c.vol||1,fin:0,fout:0,speed:c.speed||1};P.audios.push(a);c.vol=0;sel={k:'a',id:a.id};
   refresh();toast(am.wave?'تم استخراج الصوت وكتم صوت الفيديو الأصلي':'ما لقينا صوت واضح في هذا الفيديو');
 }
-let recM=null,recT0=0;
-async function toggleRec(){
+let recM=null,recT0=0,recAt=0;
+async function toggleRec(){ // voice-over: records from the mic while the project plays, then drops the take at the start point
   if(recM){recM.stop();return}
   try{
-    const st=await navigator.mediaDevices.getUserMedia({audio:true}),ch=[];recM=new MediaRecorder(st);recT0=performance.now();
+    const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}),ch=[];
+    recM=new MediaRecorder(st);recAt=time;recT0=performance.now();
     recM.ondataavailable=e=>e.data.size&&ch.push(e.data);
-    recM.onstop=async()=>{st.getTracks().forEach(t=>t.stop());const secs=(performance.now()-recT0)/1000,bl=new Blob(ch,{type:recM.mimeType||'audio/webm'});recM=null;renderLib();
-      const m=await makeMedia(new File([bl],'تسجيل صوتي.webm',{type:'audio/webm'}),{duration:secs});if(m){media.set(m.id,m);persistMedia(m);addToTimeline(m);toast('تمت إضافة التسجيل')}};
-    recM.start();renderLib();
-  }catch(e){recM=null;toast('التسجيل بالمايك غير متاح هنا. سجّل صوتك بالجوال وارفع الملف')}
+    recM.onstop=async()=>{st.getTracks().forEach(t=>t.stop());pause();const secs=(performance.now()-recT0)/1000,ty=(recM.mimeType||'audio/webm').split(';')[0],bl=new Blob(ch,{type:ty});recM=null;recUI();renderLib();
+      const m=await makeMedia(new File([bl],'تسجيل صوتي.'+(/mp4/.test(ty)?'m4a':'webm'),{type:ty.startsWith('audio')?ty:'audio/webm'}),{duration:secs});
+      if(m){media.set(m.id,m);persistMedia(m);commit();const a={id:uid(),mid:m.id,start:+recAt.toFixed(2),in:0,out:m.duration||secs,vol:1,fin:0,fout:0};P.audios.push(a);sel={k:'a',id:a.id};refresh();toast('تمت إضافة التسجيل في مسار الصوت ✓')}};
+    recM.start(250);if(total()>.1&&time<total()-.1)play();recUI();renderLib();closeSheets();
+  }catch(e){recM=null;recUI();toast('ما قدرنا نفتح المايك. اسمح للقطة تستخدم المايك وجرّب مرة ثانية')}
 }
+function recUI(){let b=$('#recPill');if(!recM){if(b)b.remove();return}if(!b){b=document.createElement('button');b.id='recPill';b.onclick=toggleRec;$('#box').appendChild(b)}
+  const tick=()=>{if(!recM||!b.isConnected)return;b.textContent='● '+fmt((performance.now()-recT0)/1000,false)+' · إيقاف التسجيل';requestAnimationFrame(tick)};tick()}
 function addToTimeline(m){
   commit();
   if(m.type==='audio'){const a={id:uid(),mid:m.id,start:+time.toFixed(2),in:0,out:m.duration,vol:1,fin:0,fout:0};P.audios.push(a);sel={k:'a',id:a.id}}
@@ -504,16 +511,16 @@ for(const c of o)c[n]=y;this.w=(this.w+1)%this.N}return true}}registerProcessor(
 let pitchReady=false;
 const VOICES=[['none','بدون'],['chip','سنجاب'],['deep','غليظ'],['monster','وحش'],['robot','روبوت'],['echo','صدى'],['cave','كهف'],['radio','راديو'],['phone','تلفون']];
 function distCurve(k){const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i*2/n-1;c[i]=(1+k)*x/(1+k*Math.abs(x))}return c}
-function impulse(d,dec){const sr=actx.sampleRate,L=Math.floor(sr*d),b=actx.createBuffer(2,L,sr);for(let c=0;c<2;c++){const x=b.getChannelData(c);for(let i=0;i<L;i++)x[i]=(Math.random()*2-1)*Math.pow(1-i/L,dec)}return b}
-function buildVoice(v){
-  const c=actx,N=[],inp=c.createGain(),out=c.createGain();N.push(inp,out);
+function impulse(d,dec,c=actx){const sr=c.sampleRate,L=Math.floor(sr*d),b=c.createBuffer(2,L,sr);for(let c=0;c<2;c++){const x=b.getChannelData(c);for(let i=0;i<L;i++)x[i]=(Math.random()*2-1)*Math.pow(1-i/L,dec)}return b}
+function buildVoice(v,c0,rd){
+  const c=c0||actx,N=[],inp=c.createGain(),out=c.createGain();N.push(inp,out);
   const pitch=r=>{const w=new AudioWorkletNode(c,'laqta-pitch');w.parameters.get('pitch').value=r;N.push(w);return w};
-  if(v==='chip'||v==='deep'||v==='monster'){if(!pitchReady)return{pending:true};const p=pitch(v==='chip'?1.6:v==='deep'?.72:.55);inp.connect(p);
+  if(v==='chip'||v==='deep'||v==='monster'){if(!(rd??pitchReady))return{pending:true};const p=pitch(v==='chip'?1.6:v==='deep'?.72:.55);inp.connect(p);
     if(v==='monster'){const ws=c.createWaveShaper();ws.curve=distCurve(6);N.push(ws);p.connect(ws);ws.connect(out)}else p.connect(out)}
   else if(v==='robot'){const rm=c.createGain();rm.gain.value=0;const osc=c.createOscillator();osc.frequency.value=55;osc.connect(rm.gain);osc.start();const dl=c.createDelay(),fb=c.createGain();dl.delayTime.value=.012;fb.gain.value=.5;
     inp.connect(rm);rm.connect(out);rm.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(out);N.push(rm,osc,dl,fb)}
   else if(v==='echo'){const dl=c.createDelay(2),fb=c.createGain();dl.delayTime.value=.28;fb.gain.value=.42;inp.connect(out);inp.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(out);N.push(dl,fb)}
-  else if(v==='cave'){const cv2=c.createConvolver(),wet=c.createGain();cv2.buffer=impulse(3.2,2.2);wet.gain.value=.9;inp.connect(out);inp.connect(cv2);cv2.connect(wet);wet.connect(out);N.push(cv2,wet)}
+  else if(v==='cave'){const cv2=c.createConvolver(),wet=c.createGain();cv2.buffer=impulse(3.2,2.2,c);wet.gain.value=.9;inp.connect(out);inp.connect(cv2);cv2.connect(wet);wet.connect(out);N.push(cv2,wet)}
   else if(v==='radio'||v==='phone'){const hp=c.createBiquadFilter(),lp=c.createBiquadFilter(),ws=c.createWaveShaper();hp.type='highpass';hp.frequency.value=v==='phone'?400:300;lp.type='lowpass';lp.frequency.value=v==='phone'?3000:4200;ws.curve=distCurve(v==='phone'?20:6);
     inp.connect(hp);hp.connect(lp);lp.connect(ws);ws.connect(out);N.push(hp,lp,ws)}
   else{inp.connect(out)}
@@ -680,7 +687,7 @@ self.onmessage=async e=>{const {model,audio}=e.data;try{
     postMessage({type:'chunk',done:j/audio.length,chunks:(out.chunks||[]).map(c=>({text:c.text,s:c.timestamp[0]+off,e:(c.timestamp[1]??c.timestamp[0]+2)+off}))});i=j}
   postMessage({type:'end'})}catch(err){postMessage({type:'err',msg:String(err&&err.message||err)})}};`;
 const ASR_MODELS=[['onnx-community/whisper-base','⚡ سريع','~80MB · للتجربة السريعة'],['onnx-community/whisper-small','✓ دقيق','~250MB · ينفع لأغلب الفيديوهات'],['onnx-community/whisper-large-v3-turbo','★ الأدق','~600MB+ · أفضل سماع للعربي واللهجات · يحتاج كرت شاشة']];
-let asrOpt={model:'onnx-community/whisper-small',clean:true,split:true};
+let asrOpt={model:'onnx-community/whisper-small',clean:true,split:true,kara:true};
 try{const o=JSON.parse(localStorage.getItem('laqta-asr')||'null');if(o)asrOpt={...asrOpt,...o}}catch(e){}
 function autoCaption(c,kind){
   const m=media.get(c.mid);if(!m||!m.file)return toast('ما لقينا صوت في هذا المقطع');
@@ -689,9 +696,10 @@ function autoCaption(c,kind){
     <div class="qopt">${ASR_MODELS.map(([k,n,d])=>`<button data-asr="${k}" class="${asrOpt.model===k?'on':''}" ${k.includes('large')&&!gpu?'disabled':''}><b>${n}</b><small>${k.includes('large')&&!gpu?'متصفحك ما يدعم كرت الشاشة. جرّب Chrome':d}</small></button>`).join('')}</div>
     <label class="ckl"><input type="checkbox" id="aClean" ${asrOpt.clean?'checked':''}> 🎧 نظّف الصوت قبل الكتابة (يرفع الصوت الواطي ويخفف الوشوشة)</label>
     <label class="ckl"><input type="checkbox" id="aSplit" ${asrOpt.split?'checked':''}> ✂️ قسّم الأسطر الطويلة (أقصى 7 كلمات بالسطر)</label>
+    <label class="ckl"><input type="checkbox" id="aKara" ${asrOpt.kara?'checked':''}> 🔤 كلمة بكلمة (الكلمة اللي تنقال تتلوّن)</label>
     <div class="row" style="margin-top:12px"><button class="primary" id="asrGo">ابدأ</button><button id="asrX">إلغاء</button></div>`);
     document.querySelectorAll('[data-asr]').forEach(b=>b.onclick=()=>{asrOpt.model=b.dataset.asr;draw()});
-    $('#aClean').onchange=e=>asrOpt.clean=e.target.checked;$('#aSplit').onchange=e=>asrOpt.split=e.target.checked;
+    $('#aClean').onchange=e=>asrOpt.clean=e.target.checked;$('#aSplit').onchange=e=>asrOpt.split=e.target.checked;$('#aKara').onchange=e=>asrOpt.kara=e.target.checked;
     $('#asrX').onclick=hideOv;$('#asrGo').onclick=()=>{try{localStorage.setItem('laqta-asr',JSON.stringify(asrOpt))}catch(_){}runAsr(c,kind,m,asrOpt.model)}};
   draw();
 }
@@ -730,7 +738,7 @@ async function runAsr(c,kind,m,model){
       let list=d.chunks.map(x=>({...x,text:(x.text||'').trim()})).filter(x=>x.text&&!HALLU.test(x.text)&&loud(x.s,x.e)&&x.text!==lastText);
       if(asrOpt.split)list=list.flatMap(x=>splitLine(x,7));
       if(list.length&&!committed){commit();committed=true}
-      for(const ch of list){lastText=ch.text;P.texts.push(norm({id:uid(),text:ch.text,start:+(base+ch.s/sp).toFixed(2),dur:+Math.max(.4,(ch.e-ch.s)/sp).toFixed(2),size:Math.round(cv.width*.055),color:'#ffffff',font:'Tajawal',weight:700,x:.5,y:.82,bg:true,bgColor:'rgba(0,0,0,.62)',shadow:0,ain:'fade',aout:'fade',caption:true}));added++}
+      for(const ch of list){lastText=ch.text;P.texts.push(norm({id:uid(),text:ch.text,start:+(base+ch.s/sp).toFixed(2),dur:+Math.max(.4,(ch.e-ch.s)/sp).toFixed(2),size:Math.round(cv.width*.055),color:'#ffffff',font:'Tajawal',weight:700,x:.5,y:.82,bg:true,bgColor:'rgba(0,0,0,.62)',shadow:0,ain:'fade',aout:'fade',caption:true,kara:asrOpt.kara?'color':'none'}));added++}
       renderTimeline();bar(30+d.done*70);msg(`كتبنا ${Math.round(d.done*100)}% · ${added} سطر لين الحين`)}
     else if(d.type==='end')finish();
     else if(d.type==='err'){asrWorker.terminate();asrWorker=null;if(added)finish();else fail(d.msg)}
@@ -756,9 +764,9 @@ async function addFont(f){
   }catch(e){toast('ما قدرنا نقرأ ملف الخط، جرّب ملف ثاني')}
 }
 function draw(){
-  const W=cv.width,H=cv.height,mc=activeMain(time),m=mc&&media.get(mc.mid);
+  const W=cv.width/PX,H=cv.height/PX,mc=activeMain(time),m=mc&&media.get(mc.mid);
   if(m&&m.type==='video'&&m.el.readyState<2)return; // keep last frame while seeking
-  g.fillStyle='#000';g.fillRect(0,0,W,H);
+  g.setTransform(PX,0,0,PX,0,0);g.fillStyle='#000';g.fillRect(0,0,W,H);
   if(m){const V=evalP(mc,time-mc._s);drawMedia(mc,m.el,W/2+V.x*W,H/2+V.y*H,V,W,H,true);fxPost(mc,W,H)}
   if(mc)drawTransitions(mc,W,H);
   drawOverlays(W,H);
@@ -772,7 +780,7 @@ function draw(){
     if(t.bg){g.fillStyle=t.bgColor;roundRect(-w/2-pad,-h/2-pad*.6,w+pad*2,h+pad*1.2,t.size*.25);g.fill()}
     const ax=t.align==='right'?w/2:t.align==='left'?-w/2:0;g.textAlign=t.align;
     let left=A.chars;
-    lines.forEach((l,i)=>{
+    if(t.kara&&t.kara!=='none')drawKara(t,lines,lh,h,w);else lines.forEach((l,i)=>{
       let s=l;if(left!==Infinity){const ch=Array.from(l);s=ch.slice(0,Math.max(0,left)).join('');left-=ch.length+1}
       if(!s)return;const y=-h/2+lh*(i+.5);
       if(t.shadow>0){g.shadowColor=t.glow?t.color:'rgba(0,0,0,.7)';g.shadowBlur=t.size*.5*t.shadow;g.shadowOffsetY=t.glow?0:t.size*.06*t.shadow}
@@ -793,11 +801,11 @@ function draw(){
   }
   if(!P.main.length&&!P.texts.length){g.fillStyle='#8a90a2';g.font=`600 ${W*.04}px Cairo, sans-serif`;g.textAlign='center';g.direction='rtl';g.fillText('أضف فيديو أو صورة من الوسائط',W/2,H/2)}
 }
-const snapC=document.createElement('canvas'),snap={id:null};
+let PX=1;const blurC=document.createElement('canvas'),snapC=document.createElement('canvas'),snap={id:null};
 function dip(T,a,W,H){g.save();g.fillStyle=T==='black'?'#000':'#fff';g.globalAlpha=clamp(a,0,1);g.fillRect(0,0,W,H);g.restore()}
 function drawTransitions(mc,W,H){
   const i=P.main.indexOf(mc),prev=P.main[i-1],nx=P.main[i+1],q=time-mc._s,rem=mc._s+dur(mc)-time;
-  if(nx&&mc.tr&&mc.tr.type!=='none'&&rem<.35){if(snapC.width!==W||snapC.height!==H){snapC.width=W;snapC.height=H}snapC.getContext('2d').drawImage(cv,0,0);snap.id=mc.id}
+  if(nx&&mc.tr&&mc.tr.type!=='none'&&rem<.35){if(snapC.width!==cv.width||snapC.height!==cv.height){snapC.width=cv.width;snapC.height=cv.height}snapC.getContext('2d').drawImage(cv,0,0);snap.id=mc.id}
   if(prev&&prev.tr&&prev.tr.type!=='none'){const d=trD(prev),T=prev.tr.type;
     if(T==='black'||T==='white'){if(q<d/2)dip(T,1-q/(d/2),W,H)}
     else if(q<d&&snap.id===prev.id){const p=eo(q/d);g.save();
@@ -808,7 +816,7 @@ function drawTransitions(mc,W,H){
       else if(T==='circle'){g.beginPath();g.rect(0,0,W,H);g.arc(W/2,H/2,p*Math.hypot(W,H)/2,0,7);g.clip('evenodd')}
       else if(T==='spin'){g.translate(W/2,H/2);g.rotate(p*Math.PI);g.scale(1-p,1-p);g.translate(-W/2,-H/2);g.globalAlpha=1-p}
       else if(T==='shake'){g.translate((Math.random()-.5)*60*(1-p),(Math.random()-.5)*30*(1-p));g.globalAlpha=1-p}
-      g.drawImage(snapC,0,0);g.restore()}}
+      g.drawImage(snapC,0,0,W,H);g.restore()}}
   if(nx&&mc.tr&&(mc.tr.type==='black'||mc.tr.type==='white')){const d=trD(mc);if(rem<d/2)dip(mc.tr.type,1-rem/(d/2),W,H)}
 }
 const FILTERS=[['none','بدون',''],['bw','أبيض وأسود','grayscale(1) contrast(1.1)'],['warm','دافئ','sepia(.3) saturate(1.3) brightness(1.03)'],['cool','بارد','saturate(.85) hue-rotate(-12deg) brightness(1.05)'],['vivid','حيوي','saturate(1.6) contrast(1.1)'],['vintage','قديم','sepia(.55) contrast(1.1) brightness(.95)'],['fade','باهت','contrast(.8) saturate(.75) brightness(1.12)'],['drama','دراما','contrast(1.45) saturate(.85) brightness(.9)'],['dream','حالم','blur(1.5px) saturate(1.25) brightness(1.08)']];
@@ -821,10 +829,33 @@ function drawMedia(c,s,cx,cy,V,W,H,isMain){
   const sw0=s.videoWidth||s.naturalWidth,sh0=s.videoHeight||s.naturalHeight;if(!sw0||!sh0)return null;
   const cr=c.crop||{},l=cr.l||0,t=cr.t||0,rr=cr.r||0,b=cr.b||0,sx=l*sw0,sy=t*sh0,sw=sw0*(1-l-rr),sh=sh0*(1-t-b);
   const k=(isMain&&c.fit==='cover'?Math.max:Math.min)(W/sw,H/sh),dw=sw*k,dh=sh*k,F=fxPre(c),fl=[filterStr(c),F.filter].filter(x=>x&&x!=='none').join(' ')||'none';
+  if(isMain&&c.fit==='blur'){ // cheap blur: shrink the frame to a tiny canvas, then stretch it back (a full-size blur filter is very slow)
+    const kc=Math.max(W/sw,H/sh),cw=sw*kc,ch=sh*kc,bw=Math.max(8,Math.round(W/22)),bh=Math.max(8,Math.round(H/22));if(blurC.width!==bw||blurC.height!==bh){blurC.width=bw;blurC.height=bh}
+    const bx=blurC.getContext('2d');bx.imageSmoothingEnabled=true;bx.drawImage(s,sx,sy,sw,sh,(bw-cw/22)/2,(bh-ch/22)/2,cw/22,ch/22);
+    g.save();g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(blurC,-W*.04,-H*.04,W*1.08,H*1.08);g.fillStyle='rgba(0,0,0,.3)';g.fillRect(0,0,W,H);g.restore()}
   g.save();g.translate(cx+F.dx,cy+F.dy);g.rotate(V.rot*Math.PI/180);g.scale(V.scale*F.s*(c.flipH?-1:1),V.scale*F.s*(c.flipV?-1:1));g.globalAlpha=clamp(V.opacity,0,1);g.filter=fl;
-  g.drawImage(s,sx,sy,sw,sh,-dw/2,-dh/2,dw,dh);
+  const mk=c.mask;if(mk&&mk.type&&mk.type!=='none'){const mw=(mk.w??.6)*dw,mh=(mk.h??.6)*dh,mx=((mk.x??.5)-.5)*dw,my=((mk.y??.5)-.5)*dh;g.beginPath();if(mk.inv)g.rect(-dw/2-2,-dh/2-2,dw+4,dh+4);maskPath(mk.type,mx,my,mw,mh);g.clip(mk.inv?'evenodd':'nonzero')}
+  const ks=keyedSource(c,s,sx,sy,sw,sh);if(ks)g.drawImage(ks,-dw/2,-dh/2,dw,dh);else g.drawImage(s,sx,sy,sw,sh,-dw/2,-dh/2,dw,dh);
   if(F.rgb){g.globalCompositeOperation='lighter';g.globalAlpha=.35*F.rgb*clamp(V.opacity,0,1);g.filter='hue-rotate(120deg)';g.drawImage(s,sx,sy,sw,sh,-dw/2+F.rgb*14,-dh/2,dw,dh);g.filter='hue-rotate(240deg)';g.drawImage(s,sx,sy,sw,sh,-dw/2-F.rgb*14,-dh/2,dw,dh)}
   g.restore();return{dw:dw*V.scale,dh:dh*V.scale};
+}
+function maskPath(t,x,y,w,h){
+  if(t==='circle')g.ellipse(x,y,w/2,h/2,0,0,Math.PI*2);
+  else if(t==='rect')g.rect(x-w/2,y-h/2,w,h);
+  else if(t==='round'){const r=Math.min(w,h)*.22,L=x-w/2,T=y-h/2;g.moveTo(L+r,T);g.arcTo(L+w,T,L+w,T+h,r);g.arcTo(L+w,T+h,L,T+h,r);g.arcTo(L,T+h,L,T,r);g.arcTo(L,T,L+w,T,r);g.closePath()}
+  else if(t==='heart'){const L=x-w/2,T=y-h/2;g.moveTo(x,T+h*.3);g.bezierCurveTo(x,T,L,T,L,T+h*.32);g.bezierCurveTo(L,T+h*.62,x,T+h*.78,x,T+h);g.bezierCurveTo(x,T+h*.78,L+w,T+h*.62,L+w,T+h*.32);g.bezierCurveTo(L+w,T,x,T,x,T+h*.3);g.closePath()}
+  else if(t==='star'){g.moveTo(x,y-h/2);for(let i=1;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?.4:1;g.lineTo(x+Math.cos(a)*w/2*rr,y+Math.sin(a)*h/2*rr)}g.closePath()}
+}
+const keyC=new Map();
+function hex2rgb(h){h=(h||'#00ff00').replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]}
+function keyedSource(c,s,sx,sy,sw,sh){ // green-screen: drop pixels near the key colour (in Cb/Cr space) and suppress colour spill
+  const ck=c.chroma;if(!ck||!ck.on)return null;let e=keyC.get(c.id);if(!e){e=document.createElement('canvas');keyC.set(c.id,e)}
+  const k=Math.min(1,640/Math.max(sw,sh)),w=Math.max(1,Math.round(sw*k)),h=Math.max(1,Math.round(sh*k));if(e.width!==w||e.height!==h){e.width=w;e.height=h}
+  const x=e.getContext('2d',{willReadFrequently:true});x.clearRect(0,0,w,h);x.drawImage(s,sx,sy,sw,sh,0,0,w,h);
+  const im=x.getImageData(0,0,w,h),d=im.data,[kr,kg,kb]=hex2rgb(ck.color),kcb=-.169*kr-.331*kg+.5*kb,kcr=.5*kr-.419*kg-.081*kb,sim=(ck.sim??.35)*120,sm=Math.max(1,(ck.smooth??.15)*120),gk=kg>=kr&&kg>=kb,bk=kb>kr&&kb>kg;
+  for(let i=0;i<d.length;i+=4){const R=d[i],G=d[i+1],B=d[i+2],cb=-.169*R-.331*G+.5*B,cr=.5*R-.419*G-.081*B,dist=Math.hypot(cb-kcb,cr-kcr),a=clamp((dist-sim)/sm,0,1);
+    if(a<1){if(gk){const m=Math.max(R,B);if(G>m)d[i+1]=m}else if(bk){const m=Math.max(R,G);if(B>m)d[i+2]=m}}d[i+3]=d[i+3]*a}
+  x.putImageData(im,0,0);return e;
 }
 function drawOverlays(W,H){
   for(const o of P.overlays){o._box=null;if(time<o.start||time>=o.start+dur(o))continue;const m=media.get(o.mid);if(!m)continue;
@@ -837,7 +868,7 @@ function drawOverlays(W,H){
 const FX=[['none','بدون'],['shake','اهتزاز'],['pulse','نبض'],['flash','وميض'],['glitch','تشويش'],['rgb','فصل ألوان'],['vhs','VHS قديم'],['neon','نيون'],['vignette','إطار معتم']];
 const prand=n=>{const x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x)};
 function fxPre(c){
-  const r={dx:0,dy:0,s:1,filter:'',rgb:0},T=c.fx,I=c.fxI??.7,t=time,W=cv.width;if(!T||T==='none')return r;
+  const r={dx:0,dy:0,s:1,filter:'',rgb:0},T=c.fx,I=c.fxI??.7,t=time,W=cv.width/PX;if(!T||T==='none')return r;
   if(T==='shake'){r.dx=Math.sin(t*53)*W*.02*I;r.dy=Math.cos(t*41)*W*.02*I}
   else if(T==='pulse')r.s=1+.08*I*Math.abs(Math.sin(t*Math.PI*1.6));
   else if(T==='neon')r.filter=`saturate(${1+I*1.5}) contrast(1.2) hue-rotate(${Math.round(t*90*I)%360}deg)`;
@@ -851,12 +882,31 @@ function fxPost(c,W,H){
   if(T==='flash'){const a=Math.pow(Math.max(0,Math.sin(t*Math.PI*3)),8)*.85*I;if(a>.01){g.fillStyle='#fff';g.globalAlpha=a;g.fillRect(0,0,W,H)}}
   else if(T==='vhs'){g.globalAlpha=.12*I;g.fillStyle='#000';for(let y=(t*60)%4;y<H;y+=4)g.fillRect(0,y,W,1.5);g.globalAlpha=.08*I;for(let i=0;i<80;i++){g.fillStyle=Math.random()<.5?'#fff':'#000';g.fillRect(Math.random()*W,Math.random()*H,2,2)}}
   else if(T==='vignette'){const gr=g.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.hypot(W,H)/2);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,`rgba(0,0,0,${.85*I})`);g.fillStyle=gr;g.fillRect(0,0,W,H)}
-  else if(T==='glitch'){const n=Math.floor(t*12),q=prand(n+.5);if(q<.4*I)for(let i=0;i<4;i++){const y=prand(n*7+i)*H,h=H*(.03+prand(n*3+i)*.06),off=(prand(n*5+i)-.5)*W*.12;g.drawImage(cv,0,y,W,h,off,y,W,h)}}
+  else if(T==='glitch'){const n=Math.floor(t*12),q=prand(n+.5);if(q<.4*I)for(let i=0;i<4;i++){const y=prand(n*7+i)*H,h=H*(.03+prand(n*3+i)*.06),off=(prand(n*5+i)-.5)*W*.12;g.drawImage(cv,0,y*PX,W*PX,h*PX,off,y,W,h)}}
   g.restore();
 }
 function addOverlay(m){if(!m||m.type==='audio')return;commit();const o={id:uid(),mid:m.id,start:+time.toFixed(2),in:0,out:m.duration,vol:1,x:.5,y:.5,scale:.45,rot:0,opacity:1,kf:[]};P.overlays.push(o);sel={k:'o',id:o.id};closeSheets();refresh();toast('تمت إضافة الطبقة. اسحبها في المعاينة عشان تحركها')}
+const KARA=[['none','بدون'],['color','تلوين'],['pop','تكبير'],['box','صندوق'],['reveal','ظهور']];
+function wordTimes(t){const key=t.text+'|'+t.dur;if(t._wtk===key)return t._wt;const ws=String(t.text).split(/\s+/).filter(Boolean),tot=ws.reduce((a,w)=>a+w.length+1,0)||1,span=t.dur*.92;let acc=0;
+  t._wt=ws.map(w=>{const s0=acc/tot*span;acc+=w.length+1;return[s0,acc/tot*span]});t._wtk=key;return t._wt}
+function drawKara(t,lines,lh,h,w){ // word-by-word: the word being spoken is highlighted; timing is spread over the line by word length
+  const lt=time-t.start,wt=wordTimes(t),hl=t.hl||'#ffd36e',sty=t.kara,sp=g.measureText(' ').width;let wi=0;
+  lines.forEach((l,li)=>{const ws=l.split(/\s+/).filter(Boolean),wd=ws.map(x=>g.measureText(x).width),tw=wd.reduce((a,b)=>a+b,0)+sp*Math.max(0,ws.length-1),y=-h/2+lh*(li+.5);
+    let xr=t.align==='right'?w/2:t.align==='left'?-w/2+tw:tw/2;g.textAlign='right';
+    ws.forEach((word,k)=>{const [s0,e0]=wt[wi]||[0,t.dur];wi++;const cur=lt>=s0&&lt<e0,fut=lt<s0,ww=wd[k];
+      if(!(sty==='reveal'&&fut)){g.save();let col=t.color;
+        if(sty==='color'){if(cur)col=hl;else if(fut)g.globalAlpha*=.45}
+        else if(sty==='pop'&&cur){col=hl;const cx=xr-ww/2;g.translate(cx,y);g.scale(1.22,1.22);g.translate(-cx,-y)}
+        else if(sty==='box'&&cur){g.fillStyle=hl;roundRect(xr-ww-t.size*.14,y-t.size*.62,ww+t.size*.28,t.size*1.24,t.size*.22);g.fill();col='#111111'}
+        else if(sty==='reveal'&&cur)g.globalAlpha*=clamp((lt-s0)/.15,0,1);
+        if(t.shadow>0&&!(sty==='box'&&cur)){g.shadowColor=t.glow?col:'rgba(0,0,0,.7)';g.shadowBlur=t.size*.5*t.shadow;g.shadowOffsetY=t.glow?0:t.size*.06*t.shadow}
+        if(t.stroke>0){g.lineJoin='round';g.lineWidth=t.size*.12*t.stroke;g.strokeStyle=t.strokeColor;g.strokeText(word,xr,y);g.shadowColor='transparent'}
+        g.fillStyle=col;g.fillText(word,xr,y);g.restore()}
+      xr-=ww+sp})});
+}
 function roundRect(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 function loop(now){
+  if(exporting&&exporting.fast){requestAnimationFrame(loop);return}
   if(playing){
     // The active video is the clock: when it stalls (seeking, buffering) the project waits for it
     // instead of racing ahead and forcing another seek, which is what made long videos stutter.
@@ -1044,6 +1094,8 @@ function renderProps(){
         ${rng('pOp','الشفافية',.1,1,.05,s.opacity,Math.round(s.opacity*100)+'%')}`,
       anim:`<div class="field"><span class="lab">حركة الدخول</span>${chips('ain',ANIM_IN,s.ain)}</div>
         <div class="field"><span class="lab">حركة الخروج</span>${chips('aout',ANIM_OUT,s.aout)}</div>
+        <div class="field"><span class="lab">🔤 كلمة بكلمة</span>${chips('kara',KARA,s.kara||'none')}</div>
+        ${s.kara&&s.kara!=='none'?`<div class="field"><span class="lab">لون الكلمة الحالية</span><div class="sw">${sw('hl',s.hl||'#ffd36e')}</div></div>`:''}
         <div class="field"><label for="pDur">مدة ظهور النص (ثانية)</label><input type="number" id="pDur" min="0.2" step="0.1" value="${s.dur.toFixed(1)}"></div>
         <button id="pPrev">▶ معاينة الحركة</button>`,
       kf:kfPanel(s,'t')};
@@ -1061,6 +1113,8 @@ function renderProps(){
     el.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>set('color',b.dataset.color));
     el.querySelectorAll('[data-scolor]').forEach(b=>b.onclick=()=>{commit();s.strokeColor=b.dataset.scolor;if(!s.stroke)s.stroke=.6;renderProps()});
     el.querySelectorAll('[data-ain]').forEach(b=>b.onclick=()=>{set('ain',b.dataset.ain);previewAnim(s)});
+    el.querySelectorAll('[data-kara]').forEach(b=>b.onclick=()=>{set('kara',b.dataset.kara);previewAnim(s)});
+    el.querySelectorAll('[data-hl]').forEach(b=>b.onclick=()=>set('hl',b.dataset.hl));
     el.querySelectorAll('[data-aout]').forEach(b=>b.onclick=()=>{set('aout',b.dataset.aout);previewAnim(s,true)});
     el.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{commit();Object.assign(s,PRESETS[+b.dataset.preset][1]);renderProps()});
     const bindR=(id,k,f)=>{const r=$('#'+id);if(!r)return;r.addEventListener('pointerdown',once);r.addEventListener('input',e=>{once();s[k]=+e.target.value;$('#'+id+'V').textContent=f(s[k])})};
@@ -1087,7 +1141,7 @@ function renderProps(){
   const vol=m.type==='image'?'':`<div class="field"><label for="pVol">الصوت · <span id="pVolV">${Math.round(s.vol*100)}%</span></label><input type="range" id="pVol" min="0" max="2" step="0.05" value="${s.vol}"></div>`;
   el.innerHTML=`<h3>${sel.k==='a'?'خصائص الصوت':sel.k==='o'?'خصائص الطبقة':m.type==='image'?'خصائص الصورة':'خصائص الفيديو'} ${x}</h3>
     <p class="hint" style="margin-top:0">${esc(m.name||'')} · ${dur(s).toFixed(2)} ثانية</p>${vol}
-    ${sel.k==='m'?`<div class="field"><span class="lab">الملاءمة</span><div class="seg"><button data-fit="contain" class="${s.fit!=='cover'?'on':''}">احتواء</button><button data-fit="cover" class="${s.fit==='cover'?'on':''}">ملء الشاشة</button></div></div>`:''}
+    ${sel.k==='m'?`<div class="field"><span class="lab">الملاءمة</span><div class="seg"><button data-fit="contain" class="${s.fit!=='cover'?'on':''}">احتواء</button><button data-fit="cover" class="${s.fit==='cover'?'on':''}">ملء الشاشة</button><button data-fit="blur" class="${s.fit==='blur'?'on':''}">🎨 خلفية ضبابية</button></div></div>`:''}
     ${m.type==='image'?`<div class="field"><label for="pDur">المدة (ثانية)</label><input type="number" id="pDur" min="0.2" step="0.1" value="${dur(s).toFixed(1)}"></div>`:''}
     ${vis&&isVid?`<h4 class="sec">⏱ السرعة · <span id="pSpV">${(s.speed||1)}x</span></h4><div class="chips">${[.25,.5,1,1.5,2,3].map(v=>`<button data-sp="${v}" class="${(s.speed||1)===v?'on':''}">${v}x</button>`).join('')}</div><input type="range" id="pSp" min="0.1" max="4" step="0.05" value="${s.speed||1}" aria-label="السرعة">`:''}
     ${(sel.k==='a'||isVid)?`<h4 class="sec">🎤 مغيّر الصوت</h4><div class="chips">${VOICES.map(([k,n])=>`<button data-voice="${k}" class="${(s.voice||'none')===k?'on':''}">${n}</button>`).join('')}</div>
@@ -1100,7 +1154,13 @@ function renderProps(){
     ${s.fx&&s.fx!=='none'?`<div class="field" style="margin-top:10px"><label for="pFxI">القوة · <span id="pFxIV">${Math.round((s.fxI??.7)*100)}%</span></label><input type="range" id="pFxI" min="0.1" max="1" step="0.05" value="${s.fxI??.7}"></div>`:''}
     <h4 class="sec">✂️ قص الصورة وقلبها</h4><div class="row" style="margin-bottom:10px"><button data-flip="flipH" class="${s.flipH?'primary':''}">⇋ قلب أفقي</button><button data-flip="flipV" class="${s.flipV?'primary':''}">⇵ قلب رأسي</button><button id="cropReset">إلغاء القص</button></div>
     ${[['cT','t','من فوق'],['cB','b','من تحت'],['cR','r','من اليمين'],['cL','l','من اليسار']].map(([id,k,n])=>`<div class="field"><label for="${id}">قص ${n} · <span id="${id}V">${Math.round(((s.crop||{})[k]||0)*100)}%</span></label><input type="range" id="${id}" data-crop="${k}" min="0" max="0.45" step="0.01" value="${(s.crop||{})[k]||0}"></div>`).join('')}`:''}
-    ${vis?`<h4 class="sec">◐ فلتر</h4><div class="flgrid">${FILTERS.map(([k,n,f])=>`<button data-flt="${k}" class="${(s.filter||'none')===k?'on':''}"><span style="background-image:url('${m.thumb||''}');filter:${f||'none'}"></span>${n}</button>`).join('')}</div>
+    ${vis?`<h4 class="sec">🟩 الشاشة الخضراء</h4><label class="ckl"><input type="checkbox" id="ckOn" ${s.chroma&&s.chroma.on?'checked':''}> شيل الخلفية الخضراء أو الزرقاء من هذا المقطع</label>
+    ${s.chroma&&s.chroma.on?`<div class="field"><span class="lab">لون الخلفية</span><div class="sw">${['#00ff00','#00b140','#0047bb','#ffffff'].map(c=>`<button data-ckc="${c}" class="${(s.chroma.color||'#00ff00')===c?'on':''}" style="background:${c}" aria-label="${c}"></button>`).join('')}<input type="color" id="ckColor" value="${s.chroma.color||'#00ff00'}" aria-label="لون مخصص"></div></div>
+    <div class="field"><label for="ckSim">قوة الإزالة · <span id="ckSimV">${Math.round((s.chroma.sim??.35)*100)}%</span></label><input type="range" id="ckSim" min="0.05" max="1" step="0.01" value="${s.chroma.sim??.35}"></div>
+    <div class="field"><label for="ckSm">نعومة الحواف · <span id="ckSmV">${Math.round((s.chroma.smooth??.15)*100)}%</span></label><input type="range" id="ckSm" min="0.01" max="0.6" step="0.01" value="${s.chroma.smooth??.15}"></div>`:''}
+    <h4 class="sec">🖌 القناع (Mask)</h4><div class="chips">${[['none','بدون'],['circle','⬤ دائرة'],['rect','■ مستطيل'],['round','▢ مدوّر'],['heart','♥ قلب'],['star','★ نجمة']].map(([k,n])=>`<button data-mask="${k}" class="${((s.mask||{}).type||'none')===k?'on':''}">${n}</button>`).join('')}</div>
+    ${s.mask&&s.mask.type&&s.mask.type!=='none'?`<div style="margin-top:10px">${[['mkW','w','العرض',.05,1.5],['mkH','h','الارتفاع',.05,1.5],['mkX','x','أفقي',0,1],['mkY','y','رأسي',0,1]].map(([id,k,n,mn,mx])=>`<div class="field"><label for="${id}">${n} · <span id="${id}V">${Math.round((s.mask[k]??(k==='w'||k==='h'?.6:.5))*100)}%</span></label><input type="range" id="${id}" data-mk="${k}" min="${mn}" max="${mx}" step="0.01" value="${s.mask[k]??(k==='w'||k==='h'?.6:.5)}"></div>`).join('')}<label class="ckl"><input type="checkbox" id="mkInv" ${s.mask.inv?'checked':''}> اعكس القناع (اخفي اللي داخل الشكل)</label></div>`:''}
+    <h4 class="sec">◐ فلتر</h4><div class="flgrid">${FILTERS.map(([k,n,f])=>`<button data-flt="${k}" class="${(s.filter||'none')===k?'on':''}"><span style="background-image:url('${m.thumb||''}');filter:${f||'none'}"></span>${n}</button>`).join('')}</div>
     ${[['aB','b','السطوع',.3,1.8],['aC','c','التباين',.3,1.8],['aS','s','التشبع',0,2.5]].map(([id,k,n,mn,mx])=>`<div class="field"><label for="${id}">${n} · <span id="${id}V">${Math.round(((s.adj||{})[k]??1)*100)}%</span></label><input type="range" id="${id}" data-adj="${k}" min="${mn}" max="${mx}" step="0.01" value="${(s.adj||{})[k]??1}"></div>`).join('')}
     <h4 class="sec">◆ كي فريم وتحريك المقطع</h4>${kfPanel(s,sel.k)}`:''}
     ${sel.k==='m'&&m.type==='video'?`<div class="field"><button id="pExt">♫ استخراج الصوت</button><p class="hint" style="margin:6px 0 0">ينقل صوت المقطع لمسار الصوت ويكتم الأصلي، عشان تقصه أو تحركه لحاله.</p></div>`:''}
@@ -1112,6 +1172,13 @@ function renderProps(){
   el.querySelectorAll('[data-fit]').forEach(b=>b.onclick=()=>{commit();s.fit=b.dataset.fit;renderProps()});
   const px=$('#pExt');if(px)px.onclick=()=>extractAudio(s);
   if(vis)bindKf(s,sel.k);
+  const ko=$('#ckOn');if(ko)ko.onchange=e=>{commit();s.chroma={color:'#00ff00',sim:.35,smooth:.15,...(s.chroma||{}),on:e.target.checked};renderProps()};
+  el.querySelectorAll('[data-ckc]').forEach(b=>b.onclick=()=>{commit();s.chroma={...s.chroma,color:b.dataset.ckc};renderProps()});
+  const kc=$('#ckColor');if(kc)kc.addEventListener('input',e=>{once();s.chroma={...s.chroma,color:e.target.value}});
+  [['ckSim','sim'],['ckSm','smooth']].forEach(([id,k])=>{const rg=$('#'+id);if(!rg)return;rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();s.chroma={...s.chroma,[k]:+e.target.value};$('#'+id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
+  el.querySelectorAll('[data-mask]').forEach(b=>b.onclick=()=>{commit();s.mask={w:.6,h:.6,x:.5,y:.5,...(s.mask||{}),type:b.dataset.mask};if(b.dataset.mask==='circle'||b.dataset.mask==='heart'||b.dataset.mask==='star'){const mm=media.get(s.mid),e2=mm&&mm.el,ar=e2?((e2.videoWidth||e2.naturalWidth||1)/(e2.videoHeight||e2.naturalHeight||1)):1;s.mask.h=clamp(s.mask.w*ar,.05,1.5)}renderProps()});
+  el.querySelectorAll('[data-mk]').forEach(rg=>{rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();s.mask={...s.mask,[rg.dataset.mk]:+e.target.value};$('#'+rg.id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
+  const mi=$('#mkInv');if(mi)mi.onchange=e=>{commit();s.mask={...s.mask,inv:e.target.checked}};
   el.querySelectorAll('[data-voice]').forEach(b=>b.onclick=()=>{commit();s.voice=b.dataset.voice;ensureAudio();renderProps();
     if(!playing&&s.voice!=='none'){const st=itemStart(sel.k,s);if(time<st||time>=st+dur(s)-.5)seek(st);play();setTimeout(()=>{if(playing&&!exporting)pause()},2500)}});
   const pc=$('#pCap');if(pc)pc.onclick=()=>autoCaption(s,sel.k);
@@ -1140,6 +1207,7 @@ $('#scrim').onclick=closeSheets;$('#mLib').onclick=()=>{libTab='files';renderLib
 $('#homeBtn').onclick=showHome;$('#tourBtn').onclick=startTour;$('#capsBtn').onclick=openCaps;
 $('#addOv').onclick=()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة عشان تحطها فوق الفيديو')};
 $('#capBtn').onclick=()=>{let s=getSel(),k=sel&&sel.k;const ok=s&&(k==='a'||((k==='m'||k==='o')&&(media.get(s.mid)||{}).type==='video'));if(!ok){layout();s=P.main.find(c=>(media.get(c.mid)||{}).type==='video');k='m'}if(!s)return toast('أضف فيديو فيه كلام أول');autoCaption(s,k)};
+$('#recBtn2').onclick=toggleRec;
 $('#addStk').onclick=()=>{libTab='stickers';renderLib();openSheet('lib')};
 $('#addSound').onclick=()=>{libTab='sounds';renderLib();openSheet('lib')};$('#mProps').onclick=()=>openSheet('props');
 
@@ -1175,21 +1243,7 @@ document.addEventListener('pointerdown',ensureAudio,{once:true});
 function pickMime(){return['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t))||''}
 function showOv(html){$('#ovCard').innerHTML=html;$('#ov').hidden=false}
 function hideOv(){$('#ov').hidden=true;$('#ovCard').innerHTML=''}
-async function startExport(){
-  if(!P.main.length&&!P.texts.length)return toast('أضف مقطع أول قبل التصدير');
-  if(!window.MediaRecorder||!cv.captureStream)return toast('متصفحك ما يدعم التصدير. جرّب Chrome أو Edge');
-  ensureAudio();pause();const prevSel=sel;sel=null;seek(0);sync();
-  await new Promise(r=>setTimeout(r,400));
-  const mime=pickMime(),stream=cv.captureStream(30);
-  if(adest)adest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
-  let rec;try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8e6}:{})}catch(e){sel=prevSel;return toast('تعذّر بدء التصدير')}
-  const chunks=[];rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-  exporting={rec,chunks,mime:rec.mimeType||mime,cancelled:false,prevSel};
-  showOv(`<h2>جاري التصدير…</h2><p>خلّ الصفحة مفتوحة لين يخلص. التصدير ياخذ نفس مدة الفيديو تقريباً.</p><div class="bar"><i id="expBar"></i></div><p id="expPct" style="font-family:var(--mono)">0%</p><div class="row"><button id="expCancel">إلغاء</button></div>`);
-  $('#expCancel').onclick=()=>{exporting.cancelled=true;finishExport()};
-  rec.onstop=()=>{const ex=exporting;exporting=null;sel=ex.prevSel;
-    if(ex.cancelled){hideOv();toast('تم إلغاء التصدير');refresh();return}
-    const blob=new Blob(ex.chunks,{type:ex.mime.split(';')[0]||'video/webm'}),ext=/mp4/.test(ex.mime)?'mp4':'webm',url=URL.createObjectURL(blob),name=`laqta-${new Date().toISOString().slice(0,10)}.${ext}`;
+function showResult(blob,ext){const url=URL.createObjectURL(blob),name=`laqta-${new Date().toISOString().slice(0,10)}.${ext}`;
     showOv(`<h2>الفيديو جاهز ✓</h2><video src="${url}" controls playsinline></video><p>${ext.toUpperCase()} · ${(blob.size/1048576).toFixed(1)} MB</p><div class="row"><button class="primary" id="saveV">⬇ حفظ الفيديو</button><button id="closeV">رجوع للتحرير</button></div>`);
     $('#closeV').onclick=()=>{hideOv();URL.revokeObjectURL(url)};
     $('#saveV').onclick=async()=>{
@@ -1197,6 +1251,119 @@ async function startExport(){
       else if(dl){try{await dl.save({filename:name,data:blob});toast('تم الحفظ')}catch(e){if(e&&e.code!=='declined')toast('ما قدرنا نحفظ الملف هنا')}}
       else{const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()}
     };refresh();
+}
+let expOpt={q:'1080',fps:30};try{const o=JSON.parse(localStorage.getItem('laqta-exp')||'null');if(o)expOpt={...expOpt,...o}}catch(e){}
+const QUAL={'720':1,'1080':1.5,'4k':3};
+const canFast=()=>'VideoEncoder' in window&&'AudioEncoder' in window&&'VideoFrame' in window&&'AudioData' in window;
+function setPX(k){PX=k;const [w,h]=RATIOS[P.ratio];cv.width=Math.round(w*k/2)*2;cv.height=Math.round(h*k/2)*2}
+function expCleanup(){setPX(1);fitCanvas()}
+function startExport(){
+  if(!P.main.length&&!P.texts.length&&!P.overlays.length)return toast('أضف مقطع أول قبل التصدير');
+  const T=total(),fast=canFast();
+  const view=()=>{const [bw,bh]=RATIOS[P.ratio],k=QUAL[expOpt.q],w=Math.round(bw*k/2)*2,h=Math.round(bh*k/2)*2;
+    showOv(`<h2>⬇ تصدير الفيديو</h2><p>${fmt(T,false)} · ${P.ratio}</p>
+    <div class="field" style="text-align:right"><span class="lab">الجودة</span><div class="chips">${[['720','720p'],['1080','1080p · أفضل'],['4k','4K · أبطأ']].map(([q,n])=>`<button data-q="${q}" class="${expOpt.q===q?'on':''}">${n}</button>`).join('')}</div></div>
+    <div class="field" style="text-align:right"><span class="lab">الفريمات في الثانية</span><div class="chips">${[24,30,60].map(f=>`<button data-fps="${f}" class="${expOpt.fps===f?'on':''}">${f}</button>`).join('')}</div></div>
+    <p class="hint">${w}×${h} · ${fast?'⚡ تصدير سريع: غالباً أسرع من مدة الفيديو بكثير':'متصفحك ما يدعم التصدير السريع، فبياخذ نفس مدة الفيديو تقريباً'}</p>
+    <div class="row"><button class="primary" id="expGo">⬇ صدّر</button><button id="expX">إلغاء</button></div>`);
+    document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{expOpt.q=b.dataset.q;view()});
+    document.querySelectorAll('[data-fps]').forEach(b=>b.onclick=()=>{expOpt.fps=+b.dataset.fps;view()});
+    $('#expX').onclick=hideOv;
+    $('#expGo').onclick=()=>{try{localStorage.setItem('laqta-exp',JSON.stringify(expOpt))}catch(_){}
+      if(fast)startFast().catch(e=>{console.warn('fast export failed, using realtime',e);exporting=null;expCleanup();startRealtime()});else startRealtime()}};
+  view();
+}
+async function loadMuxer(){if(window.Mp4Muxer)return;await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.js';sc.onload=res;sc.onerror=()=>rej(new Error('muxer'));document.head.appendChild(sc)})}
+async function seekFrame(fps){
+  const waits=[],tol=.5/fps,need=(el,t)=>{if(!el)return;if(Math.abs(el.currentTime-t)>tol||el.readyState<2)waits.push(new Promise(r=>{const d=()=>{el.removeEventListener('seeked',d);r()};el.addEventListener('seeked',d);el.currentTime=t;setTimeout(d,3000)}))};
+  const mc=activeMain(time);if(mc){const m=media.get(mc.mid);if(m&&m.type==='video')need(m.el,mtime(mc,time-mc._s))}
+  for(const o of P.overlays){const m=media.get(o.mid);if(m&&m.type==='video'&&time>=o.start&&time<o.start+dur(o))need(oPlayer(o).el,mtime(o,time-o.start))}
+  await Promise.all(waits);
+}
+async function renderAudioOffline(T){ // mix every sound offline (volume, fades, speed, voice effects) instead of recording speakers in real time
+  const sr=48000,oc=new OfflineAudioContext(2,Math.max(1,Math.ceil(T*sr)),sr);let ready=false;
+  try{await oc.audioWorklet.addModule(URL.createObjectURL(new Blob([PITCH_SRC],{type:'application/javascript'})));ready=true}catch(e){}
+  const cache=new Map(),dec=async f=>{if(!f)return null;if(!cache.has(f)){let b=null;try{b=await oc.decodeAudioData(await f.arrayBuffer())}catch(e){}cache.set(f,b)}return cache.get(f)};
+  const place=async(c,st,file,vol,voice,fin,fout)=>{const b=await dec(file);if(!b||!(vol>0))return;const src=oc.createBufferSource(),gn=oc.createGain(),d=dur(c);src.buffer=b;src.playbackRate.value=c.speed||1;
+    gn.gain.setValueAtTime(fin>0?0:vol,st);if(fin>0)gn.gain.linearRampToValueAtTime(vol,st+fin);if(fout>0){gn.gain.setValueAtTime(vol,Math.max(st,st+d-fout));gn.gain.linearRampToValueAtTime(0,st+d)}
+    const v=voice&&voice!=='none'?buildVoice(voice,oc,ready):null;if(v&&v.input){src.connect(v.input);v.output.connect(gn)}else src.connect(gn);gn.connect(oc.destination);
+    src.start(st,c.in,Math.max(.01,c.out-c.in))};
+  layout();
+  for(const c of P.main){const m=media.get(c.mid);if(m&&m.type==='video')await place(c,c._s,m.file,c.vol??1,c.voice,0,0)}
+  for(const o of P.overlays){const m=media.get(o.mid);if(m&&m.type==='video')await place(o,o.start,m.file,o.vol??1,o.voice,0,0)}
+  for(const a of P.audios){const m=media.get(a.mid);if(m)await place(a,a.start,m.file,a.vol??1,a.voice,a.fin||0,a.fout||0)}
+  return oc.startRendering();
+}
+const FAST_RATE=2;
+async function startFast(){ // frame-by-frame render with WebCodecs: each frame is drawn, encoded and muxed without waiting for real time
+  showOv(`<h2>⚡ جاري التصدير…</h2><div class="bar"><i id="expBar" style="width:2%"></i></div><p id="expPct" style="font-family:var(--mono)">تجهيز…</p><div class="row"><button id="expCancel">إلغاء</button></div>`);
+  let cancelled=false;$('#expCancel').onclick=()=>{cancelled=true};
+  await loadMuxer();pause();
+  const prevSel=sel;sel=null;const fps=expOpt.fps,T=total(),N=Math.max(1,Math.ceil(T*fps));
+  setPX(QUAL[expOpt.q]);const W=cv.width,H=cv.height,px=W*H;
+  const vcfg={codec:'avc1.'+(px>2228224?'640033':px>983040?'640028':'64001f'),width:W,height:H,bitrate:Math.round(px*fps*.1),framerate:fps};
+  for(const cd of [vcfg.codec,'avc1.4d0033','avc1.640034','avc1.42003e']){vcfg.codec=cd;if((await VideoEncoder.isConfigSupported(vcfg)).supported)break;if(cd==='avc1.42003e')throw new Error('no avc')}
+  $('#expPct').textContent='تجهيز الصوت…';
+  const ab=await renderAudioOffline(T);
+  let acodec='aac',acfg={codec:'mp4a.40.2',sampleRate:ab.sampleRate,numberOfChannels:2,bitrate:192000};
+  if(!(await AudioEncoder.isConfigSupported(acfg)).supported){acodec='opus';acfg={codec:'opus',sampleRate:ab.sampleRate,numberOfChannels:2,bitrate:160000};if(!(await AudioEncoder.isConfigSupported(acfg)).supported)throw new Error('no audio encoder')}
+  const target=new Mp4Muxer.ArrayBufferTarget();
+  const mux=new Mp4Muxer.Muxer({target,video:{codec:'avc',width:W,height:H,frameRate:fps},audio:{codec:acodec,numberOfChannels:2,sampleRate:ab.sampleRate},fastStart:'in-memory',firstTimestampBehavior:'offset'});
+  let encErr=null;
+  const ve=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>encErr=e});ve.configure(vcfg);
+  const ae=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:e=>encErr=e});ae.configure(acfg);
+  const L0=ab.getChannelData(0),R0=ab.numberOfChannels>1?ab.getChannelData(1):L0,CH=4800;
+  for(let i=0;i<ab.length;i+=CH){const n=Math.min(CH,ab.length-i),buf=new Float32Array(n*2);buf.set(L0.subarray(i,i+n),0);buf.set(R0.subarray(i,i+n),n);
+    const ad=new AudioData({format:'f32-planar',sampleRate:ab.sampleRate,numberOfFrames:n,numberOfChannels:2,timestamp:Math.round(i/ab.sampleRate*1e6),data:buf});ae.encode(ad);ad.close()}
+  exporting={fast:true};const t0=performance.now();
+  try{
+    let i=0;
+    const emit=()=>{time=i/fps;draw();const vf=new VideoFrame(cv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});ve.encode(vf,{keyFrame:i%(fps*2)===0});vf.close();i++;
+      if(i%5===0){const p=i/N,el=(performance.now()-t0)/1000,eta=el/p-el;$('#expBar').style.width=(p*100).toFixed(1)+'%';$('#expPct').textContent=`${Math.round(p*100)}% · باقي تقريباً ${fmt(eta,false)}`}};
+    const drain=async()=>{while(ve.encodeQueueSize>12)await new Promise(r=>setTimeout(r,4))};
+    const ovVideoAt=t=>P.overlays.some(o=>{const m=media.get(o.mid);return m&&m.type==='video'&&t>=o.start&&t<o.start+dur(o)});
+    while(i<N&&!cancelled&&!encErr){
+      time=i/fps;const mc=activeMain(time),m=mc&&media.get(mc.mid);
+      if(m&&m.type==='video'&&m.el.requestVideoFrameCallback&&!ovVideoAt(time)){
+        // Play the clip faster than real time and take each decoded frame as it arrives; seeking frame by frame is far slower.
+        const el=m.el,sp=mc.speed||1,segEnd=Math.min(N/fps,mc._s+dur(mc)),from=mtime(mc,time-mc._s),startI=i;
+        el.muted=true;el.currentTime=from;await new Promise(r=>{if(!el.seeking&&Math.abs(el.currentTime-from)<.02&&el.readyState>=2)return r();const d=()=>{el.removeEventListener('seeked',d);r()};el.addEventListener('seeked',d);setTimeout(d,3000)});
+        el.playbackRate=Math.min(16,sp*FAST_RATE);await el.play().catch(()=>{});
+        await new Promise(res=>{let done=false;const fin=()=>{if(!done){done=true;res()}},guard=setInterval(()=>{if(el.paused||el.ended)fin()},500);
+          const onF=async(now,meta)=>{if(done)return;if(cancelled||encErr){clearInterval(guard);return fin()}
+            const tl=mc._s+(meta.mediaTime-mc.in)/sp;
+            while(i<N&&(i+.5)/fps<=tl+1/fps&&i/fps<segEnd)emit();
+            if(i/fps>=segEnd||i>=N){clearInterval(guard);return fin()}
+            if(ve.encodeQueueSize>12){el.pause();await drain();await el.play().catch(()=>{})}
+            el.requestVideoFrameCallback(onF)};
+          el.requestVideoFrameCallback(onF)});
+        el.pause();el.muted=false;el.playbackRate=1;
+        while(i<N&&i/fps<segEnd&&!cancelled){await seekFrame(fps);emit()} // tail frames the player skipped at the very end
+        if(i===startI){await seekFrame(fps);emit()}
+      }else{await seekFrame(fps);emit()}
+      await drain();await new Promise(r=>setTimeout(r,0));
+    }
+  }finally{exporting=null;sel=prevSel}
+  if(cancelled){try{ve.close();ae.close()}catch(_){}expCleanup();hideOv();time=0;refresh();return toast('تم إلغاء التصدير')}
+  if(encErr)throw encErr;
+  $('#expPct').textContent='اللمسات الأخيرة…';await ve.flush();await ae.flush();mux.finalize();ve.close();ae.close();
+  expCleanup();time=0;refresh();showResult(new Blob([target.buffer],{type:'video/mp4'}),'mp4');
+}
+async function startRealtime(){
+  if(!window.MediaRecorder||!cv.captureStream)return toast('متصفحك ما يدعم التصدير. جرّب Chrome أو Edge');
+  ensureAudio();pause();const prevSel=sel;sel=null;seek(0);setPX(QUAL[expOpt.q]);sync();
+  await new Promise(r=>setTimeout(r,400));
+  const mime=pickMime(),stream=cv.captureStream(expOpt.fps);
+  if(adest)adest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+  let rec;try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:Math.round(8e6*PX*PX)}:{})}catch(e){sel=prevSel;expCleanup();return toast('تعذّر بدء التصدير')}
+  const chunks=[];rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+  exporting={rec,chunks,mime:rec.mimeType||mime,cancelled:false,prevSel};
+  showOv(`<h2>جاري التصدير…</h2><p>خلّ الصفحة مفتوحة لين يخلص. التصدير ياخذ نفس مدة الفيديو تقريباً.</p><div class="bar"><i id="expBar"></i></div><p id="expPct" style="font-family:var(--mono)">0%</p><div class="row"><button id="expCancel">إلغاء</button></div>`);
+  $('#expCancel').onclick=()=>{exporting.cancelled=true;finishExport()};
+  rec.onstop=()=>{const ex=exporting;exporting=null;sel=ex.prevSel;
+    if(ex.cancelled){expCleanup();hideOv();toast('تم إلغاء التصدير');refresh();return}
+    expCleanup();const blob=new Blob(ex.chunks,{type:ex.mime.split(';')[0]||'video/webm'}),ext=/mp4/.test(ex.mime)?'mp4':'webm';
+    showResult(blob,ext);refresh();
   };
   rec.start(250);play();
 }
@@ -1435,6 +1602,7 @@ function renderCaps(el){
   el.innerHTML=`<h3>📝 قائمة الترجمة <small>${L.length} سطر</small> ${x}</h3>
   <div class="row" style="margin-bottom:10px"><button class="primary" id="cAdd">＋ سطر جديد</button><button id="cMerge" title="دمج السطر المحدد مع اللي بعده">⇅ دمج</button><button id="cClose">رجوع</button></div>
   ${L.length?`<div class="field"><span class="lab">🎨 نمط موحد لكل الأسطر</span><div class="presets">${PRESETS.map(([n,p],i)=>`<button data-cpre="${i}" style="font-family:'${p.font}';color:${p.color};${p.bg?`background:${p.bgColor};`:''}${p.stroke?`-webkit-text-stroke:1px ${p.strokeColor};`:''}${p.glow?`text-shadow:0 0 8px ${p.color};`:''}">${n}</button>`).join('')}</div></div>
+  <div class="field"><span class="lab">🔤 كلمة بكلمة للكل</span><div class="chips">${KARA.map(([k,n])=>`<button data-ckara="${k}" class="${(L[0].kara||'none')===k?'on':''}">${n}</button>`).join('')}</div></div>
   <div class="field"><label for="cSize">حجم الخط للكل · <span id="cSizeV">${L[0].size}</span></label><input type="range" id="cSize" min="16" max="${Math.round(cv.width*.12)}" value="${L[0].size}"></div>
   <p class="hint" style="margin:0 0 10px">اضغط ▶ عشان تروح للسطر. اكتب الوقت بالشكل 0:12.5. ⬆ يحط السطر فوق الشاشة، و⬇ يرجعه تحت.</p>`:'<p class="hint">ما فيه أسطر للحين. استخدم «📝 كتابة تلقائية» أو اضغط «＋ سطر جديد».</p>'}
   <div id="cList">${L.map((t,i)=>`<div class="cl${sel&&sel.id===t.id?' sel':''}" data-cid="${t.id}"><div class="clh"><span class="cn">${i+1}</span><button class="ct" data-cgo="${t.id}" title="روح للسطر">▶</button>
@@ -1445,6 +1613,7 @@ function renderCaps(el){
   $('#cAdd').onclick=()=>{commit();const prev=caps()[0];const t=norm({...(prev?JSON.parse(JSON.stringify(prev)):{size:Math.round(cv.width*.055),color:'#ffffff',font:'Tajawal',weight:700,x:.5,y:.82,bg:true,bgColor:'rgba(0,0,0,.62)',shadow:0,ain:'fade',aout:'fade'}),id:uid(),text:'سطر جديد',start:+time.toFixed(2),dur:2,caption:true,kf:[],y:.82});P.texts.push(t);sel={k:'t',id:t.id};refresh();setTimeout(()=>{const ta=document.querySelector(`[data-ctx="${t.id}"]`);if(ta){ta.focus();ta.select();ta.scrollIntoView({block:'center'})}},50)};
   $('#cMerge').onclick=()=>{const L2=caps(),i=L2.findIndex(t=>sel&&t.id===sel.id);if(i<0||i>=L2.length-1)return toast('اختر سطر عشان تدمجه مع اللي بعده');commit();const a=L2[i],b=L2[i+1];a.text=a.text+' '+b.text;a.dur=b.start+b.dur-a.start;P.texts.splice(P.texts.indexOf(b),1);refresh()};
   $('#cClose').onclick=()=>{propsMode=null;sel=null;refresh()};
+  el.querySelectorAll('[data-ckara]').forEach(b=>b.onclick=()=>{commit();caps().forEach(t=>t.kara=b.dataset.ckara);refresh()});
   el.querySelectorAll('[data-cpre]').forEach(b=>b.onclick=()=>{commit();const pr=PRESETS[+b.dataset.cpre][1];caps().forEach(t=>Object.assign(t,pr));refresh();toast('تم تطبيق النمط على كل الأسطر')});
   const cs=$('#cSize');if(cs){let c=0;cs.addEventListener('input',e=>{if(!c){commit();c=1}caps().forEach(t=>t.size=+e.target.value);$('#cSizeV').textContent=e.target.value})}
   el.querySelectorAll('[data-cgo]').forEach(b=>b.onclick=()=>{const t=byId(b.dataset.cgo);pause();seek(t.start+.01);sel={k:'t',id:t.id};refresh()});
