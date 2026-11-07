@@ -199,6 +199,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .upd{background:var(--panel);border:1.5px solid var(--accent);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
 .upd b{font-size:15px}.upd small{color:var(--mute);line-height:1.7}.upd .bar{margin:0}
 .appad{display:block;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px;color:var(--text);text-decoration:none;font-weight:700}
+.ratios{display:flex;gap:6px;margin-bottom:10px}.ratios button{flex:1;flex-direction:column;gap:6px;padding:8px 0;font-size:10.5px;color:var(--mute);border-radius:12px;justify-content:center}.ratios button.on{background:var(--accent-soft);color:var(--chip-on);border-color:var(--accent)}.ratios i{display:block;border:2px solid currentColor;border-radius:3px}
 .ckl{display:flex;gap:8px;align-items:flex-start;text-align:right;margin-bottom:8px;line-height:1.6}
 .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .presets button{justify-content:center;font-size:15px;font-weight:700;padding:8px 0;background-color:var(--panel2)}
@@ -251,18 +252,20 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 @media (max-width:899px){
   #mtools,#kfFab,#qChip{display:flex}#ph{display:none}.tbar{display:none}#tourBtn,#themeBtn,.logo{display:none}
   #phc{display:block;position:absolute;top:0;bottom:0;left:calc((100% - 58px)/2);width:2px;margin-left:-1px;background:#fff;z-index:8;pointer-events:none;box-shadow:0 0 6px #0009}
-  #phc::before{content:"";position:absolute;top:0;left:-6px;border:7px solid transparent;border-top:9px solid #fff}
+  #phc::before{content:"";position:absolute;top:2px;left:-5px;width:12px;height:12px;border-radius:50%;background:#fff}
   .tlwrap{position:relative}
   #ruler{touch-action:pan-x;cursor:default}.clip{touch-action:pan-x}.clip.sel,.kd{touch-action:none}
-  .clip.sel{outline:2.5px solid #fff}.clip.sel .h{width:14px;background:#fff}
-  #clipBar:not([hidden]){display:flex;position:absolute;z-index:12;background:#ffd36e;color:#1a1400;border-radius:12px;padding:4px;gap:0;box-shadow:0 8px 20px #000a}
-  #clipBar button{flex-direction:column;gap:0;background:none;border:0;color:#1a1400;font-size:9.5px;font-weight:700;padding:3px 8px}#clipBar b{font-size:15px}#clipBar .d{color:#c0122f}
+  .clip.sel{outline:3px solid var(--accent)}.clip.sel .h{width:14px;background:var(--accent)}.clip.sel .h::after{background:#fff}
+  .kd{background:#fff;border:2px solid var(--accent);border-radius:2px}.kd.on{background:var(--accent);box-shadow:0 0 0 2px #fff}
+  #clipBar:not([hidden]){display:flex;position:absolute;z-index:12;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:16px;padding:4px;gap:2px;box-shadow:0 12px 28px #000b}
+  #clipBar button{flex-direction:column;gap:3px;background:none;border:0;color:var(--text);font-size:10px;font-weight:600;padding:6px 9px;border-radius:11px}#clipBar .p{background:var(--accent-soft);color:var(--chip-on)}#clipBar .d{color:#ff6b86}
   .mchip:not([hidden]){display:block;position:absolute;z-index:7;left:calc((100% - 58px)/2 + 10px);background:var(--panel2);border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:5px 12px;font-size:11.5px}
   #addTxtChip{top:36px}#addAudChip{top:calc(26px + 46px*3 + 10px)}
   .addend{display:grid;position:absolute;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:9px;background:#fff;color:#000;font-size:20px;font-weight:800;place-items:center;padding:0;border:0;z-index:5}
   #mtools{gap:2px;overflow-x:auto;scrollbar-width:none;padding:6px 4px;border-bottom:1px solid var(--line);background:var(--panel)}
-  #mtools button{flex-direction:column;gap:2px;min-width:56px;background:none;border:0;color:var(--mute);font-size:10.5px;padding:2px 4px}#mtools b{font-size:18px;color:var(--text);font-weight:400}
-  #mtools .back{min-width:36px;font-size:22px;border-left:1px solid var(--line);border-radius:0}
+  #mtools button{flex-direction:column;gap:5px;min-width:62px;background:none;border:0;color:var(--mute);font-size:10.5px;padding:2px 3px;white-space:nowrap}#mtools b{font-size:18px;color:var(--text);font-weight:400}
+  #mtools .ibx{width:44px;height:44px;border-radius:14px;background:var(--panel2);display:grid;place-items:center;color:var(--text)}#mtools button:first-child:not(.back) .ibx,#mtools .back+button .ibx{background:var(--accent);color:#fff}
+  #mtools .back{min-width:40px;color:var(--text);justify-content:center}
   .clip.pop{animation:selPop .32s cubic-bezier(.34,1.56,.64,1)}
   @keyframes selPop{0%{transform:scaleY(.82);filter:brightness(1.6)}60%{filter:brightness(1.15)}100%{transform:none;filter:none}}
   #clipBar.anim{animation:barIn .26s cubic-bezier(.2,.9,.3,1.3) both}
@@ -271,8 +274,8 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
   #mtools.anim button:nth-child(2){animation-delay:.03s}#mtools.anim button:nth-child(3){animation-delay:.06s}#mtools.anim button:nth-child(4){animation-delay:.09s}#mtools.anim button:nth-child(5){animation-delay:.12s}#mtools.anim button:nth-child(6){animation-delay:.15s}#mtools.anim button:nth-child(n+7){animation-delay:.18s}
   @keyframes toolIn{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}
   #mtools button:active,#clipBar button:active{transform:scale(.9)}
-  #kfFab{position:absolute;left:14px;bottom:10px;width:40px;height:40px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:#ffd36e;font-size:15px;justify-content:center;padding:0;z-index:6}
-  #kfFab.on{background:#ffd36e;color:#1a1400;border-color:#ffd36e}#kfFab.dis{opacity:.45}
+  #kfFab{position:absolute;left:14px;bottom:10px;width:46px;height:46px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);color:var(--text);justify-content:center;align-items:center;padding:0;z-index:6}
+  #kfFab.on{background:var(--accent);color:#fff;border-color:var(--accent)}#kfFab.dis{opacity:.45}
   .qchip{font-size:11.5px;padding:5px 10px}
 
   header{gap:6px}
@@ -321,7 +324,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
       <div id="libStk" hidden></div>
     </aside>
     <section class="stage">
-      <div id="box"><canvas id="cv"></canvas><button id="kfFab" class="mobonly dis" aria-label="كي فريم">◆</button></div>
+      <div id="box"><canvas id="cv"></canvas><button id="kfFab" class="mobonly dis" aria-label="كي فريم"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 21 12 12 21 3 12z"/></svg></button></div>
       <div class="ctrl">
         <button id="toStart" title="البداية">⏮</button>
         <button id="back" title="رجوع ثانية">◀◀</button>
@@ -342,7 +345,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
       <button id="addStk">✿ ستيكر</button>
       <button id="addOv">⧉ طبقة</button>
       <button id="capBtn">📝 كتابة تلقائية</button>
-      <button id="capsBtn">☰ قائمة الترجمة</button>
+      <button id="capsBtn">☰ قائمة النصوص</button>
       <button id="kfBtn" title="كي فريم (K)">◆ كي فريم</button>
       <button id="split" title="تقسيم عند المؤشر (S)">✂ تقسيم</button>
       <button id="dup">⧉ تكرار</button>
@@ -352,7 +355,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
     </div>
     <div class="tlwrap">
       <div id="phc" class="mobonly"></div>
-      <div id="clipBar" hidden><button id="cbRep"><b>⇄</b>استبدال</button><button id="cbKf"><b>◆</b>كي فريم</button><button id="cbSplit"><b>✂</b>تقسيم</button><button id="cbDup"><b>⧉</b>تكرار</button><button id="cbDel" class="d"><b>🗑</b>حذف</button></div>
+      <div id="clipBar" hidden><button id="cbSplit" class="p"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg>تقسيم</button><button id="cbKf"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3 21 12 12 21 3 12z"/></svg>كي فريم</button><button id="cbDup"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a2 2 0 0 1 2-2h11"/></svg>تكرار</button><button id="cbRep"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>استبدال</button><button id="cbDel" class="d"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>حذف</button></div>
       <button id="addTxtChip" class="mchip" hidden>+ إضافة نص</button><button id="addAudChip" class="mchip" hidden>+ إضافة صوت</button>
       <div class="labels"><div>T نص</div><div>⧉ طبقة</div><div>▣ فيديو</div><div>♫ صوت</div></div>
       <div id="scroll"><div id="inner">
@@ -776,7 +779,7 @@ async function runAsr(c,kind,m,model){
   const loud=(s0,e0)=>{let mx=0;for(let i=Math.floor(s0*10);i<Math.ceil(e0*10)&&i<energy.length;i++)mx=Math.max(mx,energy[i]);return mx>1e-5};
   const mins=(audio.length/16000/60).toFixed(1),base=itemStart(kind,c),sp=c.speed||1;let added=0,committed=false,lastText='';
   try{if(!asrWorker)asrWorker=new Worker(URL.createObjectURL(new Blob([ASR_WORKER],{type:'text/javascript'})),{type:'module'})}catch(e){return fail(e&&e.message||e)}
-  const finish=()=>{asrJob=null;hideOv();if(added){openCaps();toast(`تمت إضافة ${added} سطر. راجعها من قائمة الترجمة`)}else{refresh();toast('ما لقينا كلام واضح في هذا المقطع')}};
+  const finish=()=>{asrJob=null;hideOv();if(added){openCaps();toast(`تمت إضافة ${added} سطر. راجعها من قائمة النصوص`)}else{refresh();toast('ما لقينا كلام واضح في هذا المقطع')}};
   $('#asrStop').onclick=()=>{if(asrWorker){asrWorker.terminate();asrWorker=null}finish()};
   asrJob=true;
   asrWorker.onmessage=e=>{const d=e.data;
@@ -796,7 +799,7 @@ async function runAsr(c,kind,m,model){
 }
 const PRESETS=[
   ['عنوان',{font:'Cairo',weight:800,color:'#ffffff',stroke:0,shadow:.6,glow:false,bg:false}],
-  ['ترجمة',{font:'Tajawal',weight:700,color:'#ffffff',stroke:0,shadow:0,glow:false,bg:true,bgColor:'rgba(0,0,0,.62)'}],
+  ['سطر نص',{font:'Tajawal',weight:700,color:'#ffffff',stroke:0,shadow:0,glow:false,bg:true,bgColor:'rgba(0,0,0,.62)'}],
   ['إطار',{font:'Changa',weight:700,color:'#ffd36e',stroke:1,strokeColor:'#000000',shadow:0,glow:false,bg:false}],
   ['نيون',{font:'Reem Kufi',weight:700,color:'#5ac8fa',stroke:0,shadow:1,glow:true,bg:false}],
   ['فخم',{font:'Amiri',weight:700,color:'#f4e3b5',stroke:0,shadow:.7,glow:false,bg:false}],
@@ -1111,18 +1114,34 @@ function placeClipBar(){
   let top=r.top-wr.top-bh-6;if(top<0)top=r.bottom-wr.top+6;b.style.top=top+'px';b.style.left=(cx-wr.left-bw/2)+'px';
 }
 const MT={
-  none:[['T','نص',()=>addText()],['♫','صوت',()=>{libTab='sounds';renderLib();openSheet('lib')}],['🎙','تسجيل',()=>toggleRec()],['✿','ستيكر',()=>{libTab='stickers';renderLib();openSheet('lib')}],['⧉','طبقة',()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة')}],['📝','كتابة تلقائية',()=>$('#capBtn').click()],['☰','الترجمة',()=>openCaps()],['▣','الوسائط',()=>{libTab='files';renderLib();openSheet('lib')}],['⚙','المشروع',()=>openSheet('props')]],
-  m:[['✂','تقسيم',()=>split()],['⏱','السرعة','السرعة'],['🔊','الصوت','pVol'],['🎤','مغيّر','مغيّر الصوت'],['◐','ضبط','فلتر'],['🌀','تأثير','تأثيرات'],['🖌','قناع','القناع'],['✂️','قص الصورة','قص الصورة'],['🟩','شاشة خضراء','الشاشة الخضراء'],['🔇','الصمت','حذف الأجزاء'],['📝','كتابة','كتابة تلقائية'],['♫','استخراج',()=>{const s=getSel();if(s)extractAudio(s)}],['◆','التحريك','كي فريم وتحريك']],
-  t:[['✂','تقسيم',()=>split()],['✎','النص','font'],['🎨','التنسيق','style'],['✨','الحركة','anim'],['◆','كي فريم','kf']],
-  a:[['✂','تقسيم',()=>split()],['🔊','الصوت','pVol'],['🎤','مغيّر','مغيّر الصوت'],['📝','كتابة','كتابة تلقائية'],['🔇','الصمت','حذف الأجزاء'],['◆','كي فريم','كي فريم للصوت']]};
-MT.o=MT.m.filter(x=>x[1]!=='استخراج');
+  none:[['text','نص',()=>addText()],['music','صوت',()=>{libTab='sounds';renderLib();openSheet('lib')}],['mic','تسجيل',()=>toggleRec()],['speech','كتابة الكلام',()=>$('#capBtn').click()],['list','النصوص',()=>openCaps()],['layers','طبقة',()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة')}],['sticker','ستيكر',()=>{libTab='stickers';renderLib();openSheet('lib')}],['media','الوسائط',()=>{libTab='files';renderLib();openSheet('lib')}],['settings','المشروع',()=>openSheet('props')]],
+  m:[['cut','تقسيم',()=>split()],['speed','السرعة','السرعة'],['vol','الصوت','pVol'],['adjust','ضبط','فلتر'],['fx','تأثير','تأثيرات'],['crop','قص','قص الصورة'],['voice','مغيّر الصوت','مغيّر الصوت'],['mask','قناع','القناع'],['green','شاشة خضراء','الشاشة الخضراء'],['silence','حذف الصمت','حذف الأجزاء'],['speech','كتابة الكلام','كتابة تلقائية'],['extract','استخراج الصوت',()=>{const s=getSel();if(s)extractAudio(s)}],['move','التحريك','كي فريم وتحريك']],
+  t:[['cut','تقسيم',()=>split()],['font','الخط','font'],['style','التنسيق','style'],['anim','الحركة','anim'],['kf','كي فريم','kf']],
+  a:[['cut','تقسيم',()=>split()],['vol','الصوت','pVol'],['voice','مغيّر الصوت','مغيّر الصوت'],['speech','كتابة الكلام','كتابة تلقائية'],['silence','حذف الصمت','حذف الأجزاء'],['kf','كي فريم','كي فريم للصوت']]};
+MT.o=MT.m.filter(x=>x[1]!=='استخراج الصوت');
 function openSec(key){
   if(sel&&sel.k==='t'&&['font','style','anim','kf'].includes(key)){$('#props')._tab=key;renderProps();openSheet('props');return}
   openSheet('props');setTimeout(()=>{const pr=$('#props');let el=pr.querySelector('#'+key);if(!el)el=[...pr.querySelectorAll('h4.sec')].find(h=>h.textContent.includes(key));if(el)el.scrollIntoView({block:'start',behavior:'smooth'})},80);
 }
+const ICONS={cut:'<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
+  text:'<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/>',sticker:'<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
+  layers:'<path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',speech:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8 10h8M8 14h5"/>',
+  list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',media:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  kf:'<path d="M12 3 21 12 12 21 3 12z"/>',speed:'<path d="M12 14l4-4"/><path d="M3.5 16a9 9 0 1 1 17 0"/>',vol:'<path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
+  voice:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M3 21l3-3M21 21l-3-3"/>',adjust:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 16h4"/>',
+  fx:'<path d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8L19 21l-.8-2.2-2-.8 2-.8z"/>',mask:'<circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="4"/>',
+  crop:'<path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2"/>',green:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17c2-7 8-7 10 0"/><circle cx="12" cy="9" r="2"/>',
+  silence:'<path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="m16 9 5 5M21 9l-5 5"/>',extract:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><path d="M15 21h6M18 18v6"/>',
+  move:'<path d="M5 9 2 12l3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>',font:'<path d="M4 20 10 4h1l6 16M6.5 14h8"/><path d="M17 20h4"/>',
+  style:'<circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c1 0 2-.8 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3A5.6 5.6 0 0 0 22 10c0-4.4-4.5-8-10-8z"/>',
+  anim:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a2 2 0 0 1 2-2h11"/>',
+  swap:'<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>',trash:'<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',back:'<path d="m9 18 6-6-6-6"/>'};
+const ic=(n,s=21)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
 function renderMobTools(){
   const box=$('#mtools');if(!box)return;const s=getSel(),k=s?sel.k:'none',list=MT[k==='tr'?'none':k]||MT.none;
-  box.innerHTML=(s?'<button class="back" data-mt="back" aria-label="رجوع">‹</button>':'')+list.map((x,i)=>`<button data-mt="${i}"><b>${x[0]}</b>${x[1]}</button>`).join('');
+  box.innerHTML=(s?`<button class="back" data-mt="back" aria-label="رجوع">${ic('back',22)}</button>`:'')+list.map((x,i)=>`<button data-mt="${i}"><span class="ibx">${ICONS[x[0]]?ic(x[0]):`<b>${x[0]}</b>`}</span>${x[1]}</button>`).join('');
   box.onclick=e=>{const b=e.target.closest('[data-mt]');if(!b)return;if(b.dataset.mt==='back'){sel=null;selKf=null;closeSheets();refresh();return}
     const it=list[+b.dataset.mt],a=it[2];if(typeof a==='function')a();else openSec(a)};
 }
@@ -1182,7 +1201,7 @@ function renderProps(){
     <p class="hint">اضغط على أي مقطع في الخط الزمني أو على نص في المعاينة عشان تعدّله.<br>
     <kbd>Space</kbd> تشغيل · <kbd>S</kbd> تقسيم · <kbd>K</kbd> كي فريم · <kbd>Delete</kbd> حذف · <kbd>Ctrl+Z</kbd> تراجع</p>
     <p class="hint">مشروعك ينحفظ تلقائياً في هذا المتصفح، مع الملفات والخطوط اللي رفعتها.</p>
-    <div class="row"><button id="pHome">⌂ الرئيسية والمشاريع</button><button id="pCaps">📝 قائمة الترجمة</button><button id="pTour">🎓 الشرح</button></div>`;
+    <div class="row"><button id="pHome">⌂ الرئيسية والمشاريع</button><button id="pCaps">📝 قائمة النصوص</button><button id="pTour">🎓 الشرح</button></div>`;
     $('#pHome').onclick=showHome;$('#pCaps').onclick=openCaps;$('#pTour').onclick=startTour;return}
   if(sel.k==='t'){
     norm(s);const tab=el._tab||'font';
@@ -1263,7 +1282,7 @@ function renderProps(){
     <canvas id="slViz" class="slviz"></canvas><p class="hint" id="slInfo">جاري تحليل الصوت…</p><button id="slGo" class="primary" disabled>✂ احذف الأجزاء الهادئة</button>`:''}
     ${vis?`<h4 class="sec">🌀 تأثيرات</h4><div class="chips">${FX.map(([k,n])=>`<button data-fx="${k}" class="${(s.fx||'none')===k?'on':''}">${n}</button>`).join('')}</div>
     ${s.fx&&s.fx!=='none'?`<div class="field" style="margin-top:10px"><label for="pFxI">القوة · <span id="pFxIV">${Math.round(gv('fxI',.7)*100)}%</span></label><input type="range" id="pFxI" min="0.1" max="1" step="0.05" value="${gv('fxI',.7)}"></div>`:''}
-    <h4 class="sec">✂️ قص الصورة وقلبها</h4><div class="row" style="margin-bottom:10px"><button data-flip="flipH" class="${s.flipH?'primary':''}">⇋ قلب أفقي</button><button data-flip="flipV" class="${s.flipV?'primary':''}">⇵ قلب رأسي</button><button id="cropReset">إلغاء القص</button></div>
+    <h4 class="sec">✂️ قص الصورة وقلبها</h4><div class="ratios">${[["free","حر",18,18],["9:16","9:16",12,20],["1:1","1:1",17,17],["4:5","4:5",15,19],["16:9","16:9",22,13]].map(([k,n,w,h])=>`<button data-cr="${k}" class="${(s.cropR||"free")===k?"on":""}"><i style="width:${w}px;height:${h}px"></i>${n}</button>`).join("")}</div><div class="row" style="margin-bottom:10px"><button id="rot90">⟳ تدوير</button><button data-flip="flipH" class="${s.flipH?'primary':''}">⇋ قلب أفقي</button><button data-flip="flipV" class="${s.flipV?'primary':''}">⇵ قلب رأسي</button><button id="cropReset">إلغاء القص</button></div>
     ${[['cT','t','من فوق'],['cB','b','من تحت'],['cR','r','من اليمين'],['cL','l','من اليسار']].map(([id,k,n])=>`<div class="field"><label for="${id}">قص ${n} · <span id="${id}V">${Math.round(gv('crop.'+k,0)*100)}%</span></label><input type="range" id="${id}" data-crop="${k}" min="0" max="0.45" step="0.01" value="${gv('crop.'+k,0)}"></div>`).join('')}`:''}
     ${vis?`<h4 class="sec">🟩 الشاشة الخضراء</h4><label class="ckl"><input type="checkbox" id="ckOn" ${s.chroma&&s.chroma.on?'checked':''}> شيل الخلفية الخضراء أو الزرقاء من هذا المقطع</label>
     ${s.chroma&&s.chroma.on?`<div class="field"><span class="lab">لون الخلفية</span><div class="sw">${['#00ff00','#00b140','#0047bb','#ffffff'].map(c=>`<button data-ckc="${c}" class="${(s.chroma.color||'#00ff00')===c?'on':''}" style="background:${c}" aria-label="${c}"></button>`).join('')}<input type="color" id="ckColor" value="${s.chroma.color||'#00ff00'}" aria-label="لون مخصص"></div></div>
@@ -1298,6 +1317,12 @@ function renderProps(){
   el.querySelectorAll('[data-fx]').forEach(b=>b.onclick=()=>{commit();s.fx=b.dataset.fx;renderProps()});
   const fi=$('#pFxI');if(fi){fi.addEventListener('pointerdown',once);fi.addEventListener('input',e=>{once();setProp(s,sel.k,'fxI',+e.target.value);$('#pFxIV').textContent=Math.round(e.target.value*100)+'%'})}
   el.querySelectorAll('[data-flip]').forEach(b=>b.onclick=()=>{commit();s[b.dataset.flip]=!s[b.dataset.flip];renderProps()});
+  el.querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>{commit();const k=b.dataset.cr;s.cropR=k;if(k==='free'){delete s.crop}else{
+      const mm=media.get(s.mid),e2=mm&&mm.el,ar=e2?((e2.videoWidth||e2.naturalWidth||1)/(e2.videoHeight||e2.naturalHeight||1)):1,[a1,b1]=k.split(':').map(Number),tr=a1/b1;
+      if(ar>tr){const f=(1-tr/ar)/2;s.crop={l:f,r:f,t:0,b:0}}else{const f=(1-ar/tr)/2;s.crop={l:0,r:0,t:f,b:f}}}
+    (s.kf||[]).forEach(f=>['l','t','r','b'].forEach(q=>{if(s.crop)f['crop.'+q]=s.crop[q];else delete f['crop.'+q]})); // a ratio applies to the whole clip, keyframes included
+    refresh()});
+  const r90=$('#rot90');if(r90)r90.onclick=()=>{commit();setProp(s,sel.k,'rot',(Math.round(evalP(s,lt(sel.k,s)).rot/90)*90+90)%360);refresh()};
   const crr=$('#cropReset');if(crr)crr.onclick=()=>{commit();delete s.crop;renderProps()};
   el.querySelectorAll('[data-crop]').forEach(rg=>{rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();setProp(s,sel.k,'crop.'+rg.dataset.crop,+e.target.value);$('#'+rg.id+'V').textContent=Math.round(+e.target.value*100)+'%'})});
   if($('#slThr')&&(sel.k==='a'||sel.k==='m')){$('#slThr').oninput=e=>{silThr=+e.target.value;$('#slThrV').textContent=silThr+' dB';silencePanel(s,sel.k)};$('#slMin').oninput=e=>{silMin=+e.target.value;$('#slMinV').textContent=silMin.toFixed(2)+' ث';silencePanel(s,sel.k)};silencePanel(s,sel.k)}
@@ -1607,7 +1632,7 @@ function showHome(){pause();saveProject();homeTab='home';menuFor=null;renderHome
 function hideHome(){$('#home').hidden=true}
 function pcard(p){return `<button class="rc" data-open="${p.id}"><i style="${p.thumb?`background-image:url('${p.thumb}')`:''}" class="r-${p.ratio.replace(':','-')}"><em>${fmt(p.dur||0,false)}</em></i><small>${esc(p.name)}</small></button>`}
 function prow(p){const on=menuFor===p.id;return `<div class="pr" data-pid="${p.id}"><button class="pth" data-open="${p.id}" style="${p.thumb?`background-image:url('${p.thumb}')`:''}"><em>${fmt(p.dur||0,false)}</em></button>
-  <div class="pt">${menuFor==='rn:'+p.id?`<input id="rnIn" value="${esc(p.name)}" aria-label="اسم المشروع"><div class="row" style="margin-top:6px"><button class="primary" data-rnok="${p.id}">حفظ</button><button data-rnx>إلغاء</button></div>`:`<b>${esc(p.name)}</b><small>${ago(p.updated)} · ${fmt(p.dur||0,false)}</small><em>${p.ratio}${p.caps?' · فيها ترجمة':''}</em>`}</div>
+  <div class="pt">${menuFor==='rn:'+p.id?`<input id="rnIn" value="${esc(p.name)}" aria-label="اسم المشروع"><div class="row" style="margin-top:6px"><button class="primary" data-rnok="${p.id}">حفظ</button><button data-rnx>إلغاء</button></div>`:`<b>${esc(p.name)}</b><small>${ago(p.updated)} · ${fmt(p.dur||0,false)}</small><em>${p.ratio}${p.caps?' · فيها نصوص':''}</em>`}</div>
   <button class="dots" data-menu="${p.id}" aria-label="خيارات">⋯</button>
   ${on?`<div class="pmenu"><button data-open="${p.id}">✏️ تعديل</button><button data-rn="${p.id}">✎ إعادة تسمية</button><button data-dup="${p.id}">⧉ نسخة ثانية</button><button data-exp="${p.id}">⬇ تصدير</button><button class="del" data-del="${p.id}">🗑 حذف</button></div>`:''}</div>`}
 function renderHome(){
@@ -1621,7 +1646,7 @@ function renderHome(){
   }else if(homeTab==='projects'){
     const f=ps.filter(p=>(!homeQ||p.name.includes(homeQ))&&(homeF==='all'||(homeF==='caps'?p.caps:p.ratio===homeF)));
     el.innerHTML=`<div class="hsec"><h1>المشاريع</h1><button class="primary" id="hNew">＋ جديد</button></div><input id="hQ" class="srch" placeholder="🔍 ابحث في المشاريع" value="${esc(homeQ)}">
-    <div class="chips" style="margin-bottom:10px">${[['all',`الكل (${ps.length})`],['9:16','9:16'],['16:9','16:9'],['1:1','1:1'],['caps','فيها ترجمة']].map(([k,n])=>`<button data-hf="${k}" class="${homeF===k?'on':''}">${n}</button>`).join('')}</div>
+    <div class="chips" style="margin-bottom:10px">${[['all',`الكل (${ps.length})`],['9:16','9:16'],['16:9','16:9'],['1:1','1:1'],['caps','فيها نصوص']].map(([k,n])=>`<button data-hf="${k}" class="${homeF===k?'on':''}">${n}</button>`).join('')}</div>
     ${f.length?f.map(prow).join(''):`<p class="hint" style="text-align:center;padding:30px 0">${ps.length?'ما فيه مشاريع تطابق البحث.':'ما عندك مشاريع للحين. اضغط «＋ جديد» عشان تبدأ.'}</p>`}`;
     const q=$('#hQ');q.oninput=e=>{homeQ=e.target.value;const pos=q.selectionStart;renderHome();const n=$('#hQ');n.focus();n.setSelectionRange(pos,pos)};
     const rn=$('#rnIn');if(rn){rn.focus();rn.select();rn.onkeydown=e=>{if(e.key==='Enter')renameProject(menuFor.slice(3),rn.value).then(()=>{menuFor=null;renderHome()});if(e.key==='Escape'){menuFor=null;renderHome()}}}
@@ -1684,7 +1709,7 @@ const TOUR=[
   [['#split'],'✂ تقسيم','حط المؤشر الأبيض في المكان اللي تبيه واضغط هنا، ويتقسم المقطع لجزئين. بعدها تقدر تحذف جزء، أو تضغط ⇄ بينهم وتحط انتقال.'],
   [['#addText'],'T نص','يضيف نص فوق الفيديو. تقدر تغيّر الخط واللون والحركة، وترفع خط من جهازك.'],
   [['#addSound'],'♫ صوت','موسيقى ومؤثرات جاهزة، وتقدر تستخرج الصوت من أي فيديو.'],
-  [['#capBtn'],'📝 كتابة تلقائية','يسمع الكلام اللي في الفيديو ويكتبه نصوص بتوقيتها. بعدها تعدّل الأسطر من قائمة الترجمة.'],
+  [['#capBtn'],'📝 كتابة تلقائية','يسمع الكلام اللي في الفيديو ويكتبه نصوص بتوقيتها. بعدها تعدّل الأسطر من قائمة النصوص.'],
   [['#kfBtn'],'◆ كي فريم','يخليك تحرّك العنصر من مكان لمكان. حط كي فريم، روح لوقت ثاني، وغيّر المكان أو الحجم.'],
   [['#props','#mProps'],'⚙ الخصائص','لما تضغط على أي مقطع تطلع إعداداته هنا: السرعة، مغيّر الصوت، حذف الصمت، الفلاتر، التأثيرات، والقص.'],
   [['#exportBtn'],'⬇ تصدير','لما تخلص، اضغط هنا ويطلع لك الفيديو جاهز للحفظ.'],
@@ -1715,7 +1740,7 @@ function parseT(v){v=String(v).trim().replace(',','.');const m=v.match(/^(?:(\d+
 function openCaps(){sel=null;propsMode='caps';refresh();openSheet('props')}
 function renderCaps(el){
   const L=caps(),x='<button class="mob sheet-x" data-close>✕</button>';
-  el.innerHTML=`<h3>📝 قائمة الترجمة <small>${L.length} سطر</small> ${x}</h3>
+  el.innerHTML=`<h3>📝 قائمة النصوص <small>${L.length} سطر</small> ${x}</h3>
   <div class="row" style="margin-bottom:10px"><button class="primary" id="cAdd">＋ سطر جديد</button><button id="cMerge" title="دمج السطر المحدد مع اللي بعده">⇅ دمج</button><button id="cClose">رجوع</button></div>
   ${L.length?`<div class="field"><span class="lab">🎨 نمط موحد لكل الأسطر</span><div class="presets">${PRESETS.map(([n,p],i)=>`<button data-cpre="${i}" style="font-family:'${p.font}';color:${p.color};${p.bg?`background:${p.bgColor};`:''}${p.stroke?`-webkit-text-stroke:1px ${p.strokeColor};`:''}${p.glow?`text-shadow:0 0 8px ${p.color};`:''}">${n}</button>`).join('')}</div></div>
   <div class="field"><span class="lab">🔤 كلمة بكلمة للكل</span><div class="chips">${KARA.map(([k,n])=>`<button data-ckara="${k}" class="${(L[0].kara||'none')===k?'on':''}">${n}</button>`).join('')}</div></div>
