@@ -200,6 +200,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .upd b{font-size:15px}.upd small{color:var(--mute);line-height:1.7}.upd .bar{margin:0}
 .appad{display:block;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px;color:var(--text);text-decoration:none;font-weight:700}
 .ratios{display:flex;gap:6px;margin-bottom:10px}.ratios button{flex:1;flex-direction:column;gap:6px;padding:8px 0;font-size:10.5px;color:var(--mute);border-radius:12px;justify-content:center}.ratios button.on{background:var(--accent-soft);color:var(--chip-on);border-color:var(--accent)}.ratios i{display:block;border:2px solid currentColor;border-radius:3px}
+.dberr{background:#ff3b5c1a;border:1.5px solid #ff3b5c;border-radius:16px;padding:14px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px}.dberr small{color:var(--mute);line-height:1.7}
 .ckl{display:flex;gap:8px;align-items:flex-start;text-align:right;margin-bottom:8px;line-height:1.6}
 .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .presets button{justify-content:center;font-size:15px;font-weight:700;padding:8px 0;background-color:var(--panel2)}
@@ -369,6 +370,7 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
     </div>
   </section>
 </div>
+<input type="file" id="bkFile" accept=".laqta,application/octet-stream" hidden>
 <input type="file" id="repFile" accept="video/*,image/*,audio/*" hidden>
 <input type="file" id="addFile" multiple accept="video/*,image/*,audio/*" hidden>
 <input type="file" id="newFile" multiple accept="video/*,image/*,audio/*" hidden>
@@ -1529,8 +1531,8 @@ async function startRealtime(){
   };
   rec.start(250);play();
 }
-async function saveAndroid(blob,name){ // inside the Android app: stream the file to the gallery in base64 chunks
-  const A=window.LaqtaAndroid,CH=3<<20;if(!A.begin(name,(blob.type||'video/mp4').split(';')[0]))throw 0;
+async function saveAndroid(blob,name,toDownloads){ // inside the Android app: stream the file to the gallery (or Downloads) in base64 chunks
+  const A=window.LaqtaAndroid,CH=3<<20,ok=toDownloads?A.beginDownload(name,'application/octet-stream'):A.begin(name,(blob.type||'video/mp4').split(';')[0]);if(!ok)throw new Error('save');
   for(let o=0;o<blob.size;o+=CH){const u=new Uint8Array(await blob.slice(o,o+CH).arrayBuffer());let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));if(!A.chunk(btoa(s)))throw 0}
   if(!A.end())throw 0;
 }
@@ -1602,8 +1604,10 @@ async function deleteProject(pid){
 }
 async function duplicateProject(pid){const r=projects.find(p=>p.id===pid);if(!r)return;const n={...r,id:'p'+Date.now().toString(36)+uid(),name:r.name+' (نسخة)',created:Date.now(),updated:Date.now()};await DB.put('projects',n.id,n);projects.push(n);renderHome();toast('تم عمل نسخة')}
 async function renameProject(pid,name){const r=projects.find(p=>p.id===pid);if(!r||!name.trim())return;r.name=name.trim();await DB.put('projects',pid,r);if(pid===curPid){curName=r.name;refreshInfo()}renderHome()}
+let dbErr=null;
 async function migrate(){
-  projects=await DB.all('projects').catch(()=>[]);
+  dbErr=null;try{projects=await DB.all('projects')}catch(e){projects=[];dbErr=e;DB.db=null;return} // never show an empty list when the store could not be read
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
   const old=await DB.get('kv','project').catch(()=>null);
   if(old&&!projects.length){const id='p'+Date.now().toString(36)+uid(),rec={id,name:'مشروعي الأول',json:old,created:Date.now(),updated:Date.now(),ratio:'9:16',dur:0,clips:0,caps:old.includes('"caption":true'),thumb:''};
     try{const q=JSON.parse(old);rec.ratio=q.ratio;rec.clips=q.main.length}catch(e){}
@@ -1611,6 +1615,31 @@ async function migrate(){
     await DB.put('projects',id,rec);await DB.del('kv','project');projects=[rec]}
 }
 function newProject(){createProject()}
+/* ---------- backup file: every project, its media and fonts in one file ---------- */
+async function saveBackup(){
+  await saveProject(true);showLoading('جاري تجهيز النسخة الاحتياطية…');
+  try{
+    const ps=await DB.all('projects'),ms=await DB.all('media'),fs=await DB.all('fonts'),parts=[],head={v:1,app:'laqta',date:Date.now(),projects:ps,media:[],fonts:[]};let off=0;
+    for(const m of ms){const {blob,...meta}=m;if(blob){parts.push(blob);head.media.push({...meta,mime:blob.type,off,size:blob.size});off+=blob.size}else head.media.push({...meta,off:-1,size:0})}
+    for(const f of fs){const b=new Blob([f.buf]);parts.push(b);head.fonts.push({fam:f.fam,label:f.label,off,size:b.size});off+=b.size}
+    const hj=new TextEncoder().encode(JSON.stringify(head)),len=String(hj.length).padStart(12,'0'),blob=new Blob(['LAQTA1',len,hj,...parts],{type:'application/octet-stream'});
+    const name=`laqta-backup-${new Date().toISOString().slice(0,10)}.laqta`;hideLoading();
+    if(inApp()&&LaqtaAndroid.beginDownload){await saveAndroid(blob,name,true);toast('انحفظت النسخة في التنزيلات: Download/Laqta ✓')}
+    else{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);toast('تم تنزيل النسخة الاحتياطية ✓')}
+  }catch(e){hideLoading();toast('ما قدرنا نسوي النسخة: '+(e&&e.message||e))}
+}
+async function loadBackup(file){
+  showLoading('جاري استرجاع المشاريع…');
+  try{
+    const magic=await file.slice(0,6).text();if(magic!=='LAQTA1')throw new Error('هذا الملف مو نسخة احتياطية من لقطة');
+    const len=+(await file.slice(6,18).text()),head=JSON.parse(await file.slice(18,18+len).text()),base=18+len;let n=0;
+    for(const m of head.media){const {off,size,mime,...meta}=m;const rec={...meta,blob:off>=0?new File([file.slice(base+off,base+off+size)],meta.name||'media',{type:mime||''}):null};await DB.put('media',rec.id,rec)}
+    for(const f of head.fonts){const buf=await file.slice(base+f.off,base+f.off+f.size).arrayBuffer();await DB.put('fonts',f.fam,{fam:f.fam,label:f.label,buf});if(!customFonts.some(x=>x[0]===f.fam)){try{const ff=new FontFace(f.fam,buf.slice(0));await ff.load();document.fonts.add(ff);customFonts.push([f.fam,f.label,true])}catch(_){}}}
+    for(const pr of head.projects){await DB.put('projects',pr.id,pr);n++}
+    await migrate();hideLoading();homeTab='projects';renderHome();toast(`تم استرجاع ${n} مشروع ✓`);
+  }catch(e){hideLoading();toast('ما قدرنا نسترجع النسخة: '+(e&&e.message||e))}
+}
+document.getElementById('bkFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)loadBackup(f)});
 function freshSample(){
   const a=sampleImage('غروب.jpg',['#f6a35b','#e0607a','#7a2f6e','#1e1236'],'#ffe2a8'),b=sampleImage('ليل.jpg',['#5ac8fa','#1d5f8a','#0d2b3e','#08121c'],'#f4f1ff');
   P.main.push({id:uid(),mid:a.id,in:0,out:4,vol:1,fit:'cover'},{id:uid(),mid:b.id,in:0,out:3,vol:1,fit:'cover'});
@@ -1661,8 +1690,9 @@ function prow(p){const on=menuFor===p.id;return `<div class="pr" data-pid="${p.i
 function renderHome(){
   const el=$('#homeBody');el.classList.remove('anim');void el.offsetWidth;el.classList.add('anim');const _x=0,ps=[...projects].sort((a,b)=>b.updated-a.updated);
   document.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on',b.dataset.htab===homeTab));
+  const errBox=dbErr?`<div class="dberr"><b>⚠️ ما قدرنا نفتح مشاريعك المحفوظة</b><small>مشاريعك ممكن تكون موجودة. لا تحذف التطبيق، واضغط «حاول مرة ثانية» أو قفّل التطبيق وافتحه.</small><small style="direction:ltr;font-family:var(--mono)">${esc(String(dbErr&&dbErr.message||dbErr).slice(0,160))}</small><div class="row"><button class="primary" id="dbRetry">🔄 حاول مرة ثانية</button></div></div>`:'';
   if(homeTab==='home'){
-    el.innerHTML=`<div id="updBox"></div>${!inApp()&&/Android/i.test(navigator.userAgent)?`<a class="appad" href="${APK_URL}">📱 حمّل تطبيق لقطة للأندرويد</a>`:''}<div class="hero"><span class="dc">✂</span><h2>وش بتسوي اليوم؟</h2><p>اختر فيديو من جهازك وابدأ على طول</p><div class="row"><button class="nb" id="hNew">＋ فيديو جديد</button>${ps.length?'':'<button class="nb2" id="hSample">جرّب مشروع مثال</button>'}</div></div>
+    el.innerHTML=`${errBox}<div id="updBox"></div>${!inApp()&&/Android/i.test(navigator.userAgent)?`<a class="appad" href="${APK_URL}">📱 حمّل تطبيق لقطة للأندرويد</a>`:''}<div class="hero"><span class="dc">✂</span><h2>وش بتسوي اليوم؟</h2><p>اختر فيديو من جهازك وابدأ على طول</p><div class="row"><button class="nb" id="hNew">＋ فيديو جديد</button>${ps.length?'':'<button class="nb2" id="hSample">جرّب مشروع مثال</button>'}</div></div>
     ${ps.length?`<div class="hsec"><b>آخر المشاريع</b><button class="lnk" data-htab="projects">الكل ‹</button></div><div class="recent">${ps.slice(0,8).map(pcard).join('')}</div>`:''}
     <div class="hsec"><b>الأدوات</b></div><div class="tg">${TOOLS.map(([k,i,n,nw])=>`<button data-tool="${k}" class="${nw?'new':''}"><i>${i}</i>${n}</button>`).join('')}</div>`;
     updateBanner();
@@ -1677,15 +1707,20 @@ function renderHome(){
     let th='dark';th=document.documentElement.getAttribute('data-theme');
     el.innerHTML=`<h1>الإعدادات</h1><div class="setr"><div><b>الوضع</b><small>ليلي أو صباحي</small></div><div class="seg"><button data-th="dark" class="${th==='dark'?'on':''}">☾ ليلي</button><button data-th="light" class="${th==='light'?'on':''}">☀ صباحي</button></div></div>
     <div class="setr"><div><b>الشرح التفاعلي</b><small>يوريك كل زر وش يسوي</small></div><button id="hTour">🎓 ابدأ الشرح</button></div>
-    <div class="setr"><div><b>المشاريع المحفوظة</b><small>${projects.length} مشروع في هذا المتصفح</small></div></div>
+    <div class="setr"><div><b>المشاريع المحفوظة</b><small id="stInfo">${projects.length} مشروع في هذا الجهاز</small></div></div>
+    <div class="setr"><div><b>💾 نسخة احتياطية</b><small>احفظ كل مشاريعك مع الفيديوهات في ملف واحد، وارجعها وقت ما تبي</small></div><div class="row"><button class="primary" id="bkSave">💾 احفظ نسخة</button><button id="bkLoad">📂 استرجع نسخة</button></div></div>
     <div class="setr"><div><b>الإصدار</b><small>${inApp()?'تطبيق أندرويد 1.0.'+LaqtaAndroid.versionCode():'الموقع يتحدّث تلقائياً'}</small></div>${inApp()?'<button id="hUpd">🔄 شيّك على التحديثات</button>':`<a class="appad" style="margin:0" href="${APK_URL}">📱 تطبيق الأندرويد</a>`}</div>
-    <p class="hint">كل شي ينحفظ في هذا الجهاز بس. لو مسحت بيانات المتصفح تنحذف المشاريع.</p>`;
+    <p class="hint">كل شي ينحفظ في هذا الجهاز بس. احفظ نسخة احتياطية من وقت لوقت، عشان لو انمسحت بيانات التطبيق أو المتصفح ترجّع مشاريعك.</p>`;
+    if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(e=>{const i=$('#stInfo');if(i)i.textContent=`${projects.length} مشروع · ${(e.usage/1048576).toFixed(0)} ميجا مستخدمة`}).catch(()=>{});
   }
 }
 $('#home').addEventListener('click',async e=>{
   const t=e.target.closest('button,[data-open]');if(!t)return;const d=t.dataset;
   if(d.htab){homeTab=d.htab;menuFor=null;renderHome();return}
   if(t.id==='hUpd'){checkUpdate();homeTab='home';renderHome();setTimeout(()=>{if(!upd)toast('عندك آخر إصدار ✓')},2500);return}
+  if(t.id==='dbRetry'){await migrate().catch(()=>{});renderHome();if(!dbErr)toast('تم ✓');return}
+  if(t.id==='bkSave')return saveBackup();
+  if(t.id==='bkLoad'){const f=$('#bkFile');f.value='';f.click();return}
   if(t.id==='hNew')return pickNew();
   if(t.id==='hSample')return createProject('مشروع مثال',true);
   if(t.id==='hTour'||d.tool==='tour'){const p=[...projects].sort((a,b)=>b.updated-a.updated)[0];if(p)await openProject(p.id);else await createProject('مشروع مثال',true);try{localStorage.removeItem('laqta-tour')}catch(_){}setTimeout(startTour,300);return}

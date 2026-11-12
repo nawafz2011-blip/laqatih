@@ -286,6 +286,22 @@ public class MainActivity extends Activity {
             }
         }
 
+        /** Same as begin(), but into Download/Laqta (used for project backups). */
+        @JavascriptInterface
+        public boolean beginDownload(String name, String mime) {
+            try {
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+                v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Laqta");
+                Uri uri = getContentResolver().insert(MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), v);
+                out = getContentResolver().openOutputStream(uri);
+                return out != null;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
         @JavascriptInterface
         public boolean chunk(String b64) {
             try {
@@ -301,7 +317,7 @@ public class MainActivity extends Activity {
             try {
                 out.close();
                 out = null;
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "انحفظ الفيديو في المعرض: Movies/Laqta", Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "تم الحفظ ✓", Toast.LENGTH_SHORT).show());
                 return true;
             } catch (Exception e) {
                 return false;
