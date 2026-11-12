@@ -201,6 +201,8 @@ h4.sec{font-size:12.5px;margin:18px 0 8px}
 .appad{display:block;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px;color:var(--text);text-decoration:none;font-weight:700}
 .ratios{display:flex;gap:6px;margin-bottom:10px}.ratios button{flex:1;flex-direction:column;gap:6px;padding:8px 0;font-size:10.5px;color:var(--mute);border-radius:12px;justify-content:center}.ratios button.on{background:var(--accent-soft);color:var(--chip-on);border-color:var(--accent)}.ratios i{display:block;border:2px solid currentColor;border-radius:3px}
 .dberr{background:#ff3b5c1a;border:1.5px solid #ff3b5c;border-radius:16px;padding:14px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px}.dberr small{color:var(--mute);line-height:1.7}
+.ttabs{overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}.ttabs button{flex:0 0 auto;padding:6px 12px}
+.alg{display:flex;gap:8px}.alg button{flex:1;flex-direction:column;gap:4px;padding:10px 0;justify-content:center}.alg button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--chip-on)}
 .ckl{display:flex;gap:8px;align-items:flex-start;text-align:right;margin-bottom:8px;line-height:1.6}
 .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .presets button{justify-content:center;font-size:15px;font-weight:700;padding:8px 0;background-color:var(--panel2)}
@@ -404,7 +406,12 @@ function fmt(t,cs=true){t=Math.max(0,t);const m=Math.floor(t/60),s=Math.floor(t%
 /* ---------- project model ---------- */
 const dur=c=>(c.out-c.in)/(c.speed||1);
 const mtime=(c,local)=>c.in+local*(c.speed||1);
-function layout(){let s=0;for(const c of P.main){c._s=s;s+=dur(c)}return s}
+// Crossfade-type transitions overlap the two clips: the next clip starts trD() seconds before this one ends and both play together.
+const isCross=c=>!!(c&&c.tr&&!['none','black','white'].includes(c.tr.type)&&P.main.indexOf(c)<P.main.length-1);
+function layout(){let s=0,end=0;for(const c of P.main){c._s=s;end=Math.max(end,s+dur(c));s+=dur(c);if(isCross(c))s-=trD(c)}return end}
+function prevCross(T){const mc=activeMain(T);if(!mc)return null;const pv=P.main[P.main.indexOf(mc)-1];if(pv&&isCross(pv)&&T<pv._s+dur(pv)){const d=trD(pv);return{pv,p:clamp((T-mc._s)/d,0,1)}}return null}
+const trP=new Map();
+function tPlayer(c){const m=media.get(c.mid);let p=trP.get(c.id);if(!p||p.src!==m.url){const el=document.createElement('video');el.src=m.url;el.preload='auto';el.playsInline=true;el.setAttribute('playsinline','');p={el,src:m.url};trP.set(c.id,p);hook(p)}return p}
 function total(){let d=layout();for(const t of P.texts)d=Math.max(d,t.start+t.dur);for(const a of P.audios)d=Math.max(d,a.start+dur(a));for(const o of P.overlays||[])d=Math.max(d,o.start+dur(o));return d}
 function list(k){return k==='m'||k==='tr'?P.main:k==='t'?P.texts:k==='o'?P.overlays:P.audios}
 function getSel(){if(!sel)return null;return list(sel.k).find(x=>x.id===sel.id)||null}
@@ -538,13 +545,13 @@ function addToTimeline(m){
 }
 
 /* ---------- playback ---------- */
-function activeMain(T){layout();return P.main.find(c=>T>=c._s&&T<c._s+dur(c))||null}
+function activeMain(T){layout();for(let i=P.main.length-1;i>=0;i--){const c=P.main[i];if(T>=c._s&&T<c._s+dur(c))return c}return null}
 function play(){if(playing)return;ensureAudio();if(time>=total()-0.02)time=0;playing=true;t0=performance.now()-time*1000;$('#play').textContent='❚❚'}
 const clipP=new Map(); // one audio element per audio clip, so the same sound can overlap itself
 function aPlayer(a){const m=media.get(a.mid);let o=clipP.get(a.id);if(!o||o.src!==m.url){o={el:new Audio(m.url),src:m.url};o.el.preload='auto';clipP.set(a.id,o);hook(o)}return o}
 const ovP=new Map();
 function oPlayer(o){const m=media.get(o.mid);let p=ovP.get(o.id);if(!p||p.src!==m.url){const el=document.createElement('video');el.src=m.url;el.preload='auto';el.playsInline=true;el.setAttribute('playsinline','');p={el,src:m.url};ovP.set(o.id,p);hook(p)}return p}
-function players(){return[...[...media.values()].filter(m=>m.type==='video'&&m.el),...clipP.values(),...ovP.values()]}
+function players(){return[...[...media.values()].filter(m=>m.type==='video'&&m.el),...clipP.values(),...ovP.values(),...trP.values()]}
 /* ---------- voice changer ---------- */
 const PITCH_SRC=`class P extends AudioWorkletProcessor{static get parameterDescriptors(){return[{name:'pitch',defaultValue:1}]}
 constructor(){super();this.N=8192;this.b=new Float32Array(this.N);this.w=0;this.ph=0;this.G=2400}
@@ -586,6 +593,7 @@ function sync(){
   const want=new Map(),mc=activeMain(time);masterEl=mc&&media.get(mc.mid)&&media.get(mc.mid).type==='video'?media.get(mc.mid):null;
   if(userSeek){if(!masterEl||(!masterEl.el.seeking&&Math.abs(masterEl.el.currentTime-mtime(mc,time-mc._s))<.3))userSeek=false}
   if(mc){const m=media.get(mc.mid);if(m&&m.type==='video')want.set(m,{t:mtime(mc,time-mc._s),vol:evalP(mc,time-mc._s).vol,rate:mc.speed||1,voice:mc.voice})}
+  {const pc=prevCross(time);if(pc){const m=media.get(pc.pv.mid);if(m&&m.type==='video')want.set(tPlayer(pc.pv),{t:mtime(pc.pv,time-pc.pv._s),vol:evalP(pc.pv,time-pc.pv._s).vol*(1-pc.p),rate:pc.pv.speed||1,voice:pc.pv.voice})}}
   for(const o of P.overlays){const m=media.get(o.mid);if(m&&m.type==='video'&&time>=o.start&&time<o.start+dur(o))want.set(oPlayer(o),{t:mtime(o,time-o.start),vol:evalP(o,time-o.start).vol,rate:o.speed||1,voice:o.voice})}
   for(const a of P.audios){if(time>=a.start&&time<a.start+dur(a)&&media.get(a.mid)){const o=aPlayer(a),lt=time-a.start,e=a.start+dur(a)-time;let v=evalP(a,lt).vol;if(a.fin>0)v*=Math.min(1,lt/a.fin);if(a.fout>0)v*=Math.min(1,e/a.fout);want.set(o,{t:mtime(a,lt),vol:v,rate:a.speed||1,voice:a.voice})}}
   for(const m of players()){
@@ -830,22 +838,22 @@ function draw(){
   drawOverlays(W,H);
   for(const t of P.texts){
     t._box=null;if(time<t.start||time>=t.start+t.dur)continue;
-    norm(t);const V=evalP(t,time-t.start);t._op=V.opacity;const lines=wrapLines(t),lh=t.size*1.3;g.font=`${t.weight} ${t.size}px "${t.font}", Cairo, sans-serif`;g.textBaseline='middle';g.direction='rtl';
+    norm(t);const V=evalP(t,time-t.start);t._op=V.opacity;const lines=wrapLines(t),lh=t.size*(t.lh||1.3);try{g.letterSpacing=(t.ls||0)+'px'}catch(e){}g.font=`${t.weight} ${t.size}px "${t.font}", Cairo, sans-serif`;g.textBaseline='middle';g.direction='rtl';
     const w=Math.max(...lines.map(l=>g.measureText(l).width)),h=lh*lines.length,cx=V.x*W,cy=V.y*H,pad=t.size*.35,sc=V.scale;
     t._box={x:cx-(w/2+pad)*sc,y:cy-(h/2+pad*.6)*sc,w:(w+pad*2)*sc,h:(h+pad*1.2)*sc};
     const A=anim(t);
     g.save();g.translate(cx,cy+A.dy);g.rotate(V.rot*Math.PI/180);g.scale(A.scale*sc,A.scale*sc);g.globalAlpha=clamp(A.alpha,0,1);
-    if(t.bg){g.fillStyle=t.bgColor;roundRect(-w/2-pad,-h/2-pad*.6,w+pad*2,h+pad*1.2,t.size*.25);g.fill()}
+    if(t.bg){const bp=t.size*(t.bgPad??.35);g.fillStyle=t.bgHex?hexA(t.bgHex,t.bgOp??.62):t.bgColor;roundRect(-w/2-bp,-h/2-bp*.6,w+bp*2,h+bp*1.2,t.size*(t.bgR??.25));g.fill()}
     const ax=t.align==='right'?w/2:t.align==='left'?-w/2:0;g.textAlign=t.align;
     let left=A.chars;
     if(t.kara&&t.kara!=='none')drawKara(t,lines,lh,h,w);else lines.forEach((l,i)=>{
       let s=l;if(left!==Infinity){const ch=Array.from(l);s=ch.slice(0,Math.max(0,left)).join('');left-=ch.length+1}
       if(!s)return;const y=-h/2+lh*(i+.5);
-      if(t.shadow>0){g.shadowColor=t.glow?t.color:'rgba(0,0,0,.7)';g.shadowBlur=t.size*.5*t.shadow;g.shadowOffsetY=t.glow?0:t.size*.06*t.shadow}
+      if(t.shadow>0)txtShadow(t,t.color);
       if(t.stroke>0){g.lineJoin='round';g.lineWidth=t.size*.12*t.stroke;g.strokeStyle=t.strokeColor;g.strokeText(s,ax,y);g.shadowColor='transparent'}
       g.fillStyle=t.color;g.fillText(s,ax,y);g.shadowColor='transparent';
     });
-    g.restore();
+    g.restore();try{g.letterSpacing='0px'}catch(e){}
     if(!exporting&&sel&&sel.k==='t'&&sel.id===t.id){g.setLineDash([10,7]);g.strokeStyle='#7c5cff';g.lineWidth=3;g.strokeRect(t._box.x,t._box.y,t._box.w,t._box.h);g.setLineDash([])}
   }
   const si=getSel();
@@ -863,19 +871,22 @@ let PX=1;const blurC=document.createElement('canvas'),snapC=document.createEleme
 function dip(T,a,W,H){g.save();g.fillStyle=T==='black'?'#000':'#fff';g.globalAlpha=clamp(a,0,1);g.fillRect(0,0,W,H);g.restore()}
 function drawTransitions(mc,W,H){
   const i=P.main.indexOf(mc),prev=P.main[i-1],nx=P.main[i+1],q=time-mc._s,rem=mc._s+dur(mc)-time;
-  if(nx&&mc.tr&&mc.tr.type!=='none'&&rem<.35){if(snapC.width!==cv.width||snapC.height!==cv.height){snapC.width=cv.width;snapC.height=cv.height}snapC.getContext('2d').drawImage(cv,0,0);snap.id=mc.id}
-  if(prev&&prev.tr&&prev.tr.type!=='none'){const d=trD(prev),T=prev.tr.type;
-    if(T==='black'||T==='white'){if(q<d/2)dip(T,1-q/(d/2),W,H)}
-    else if(q<d&&snap.id===prev.id){const p=eo(q/d);g.save();
-      if(T==='fade')g.globalAlpha=1-p;else if(T==='slideL')g.translate(-p*W,0);else if(T==='slideR')g.translate(p*W,0);
-      else if(T==='zoom'){g.translate(W/2,H/2);g.scale(1+p*.6,1+p*.6);g.translate(-W/2,-H/2);g.globalAlpha=1-p}else if(T==='blur'){g.filter=`blur(${p*30}px)`;g.globalAlpha=1-p}
-      else if(T==='slideU')g.translate(0,-p*H);else if(T==='slideD')g.translate(0,p*H);
-      else if(T==='wipeL'){g.beginPath();g.rect(0,0,W*(1-p),H);g.clip()}else if(T==='wipeR'){g.beginPath();g.rect(W*p,0,W*(1-p),H);g.clip()}
-      else if(T==='circle'){g.beginPath();g.rect(0,0,W,H);g.arc(W/2,H/2,p*Math.hypot(W,H)/2,0,7);g.clip('evenodd')}
-      else if(T==='spin'){g.translate(W/2,H/2);g.rotate(p*Math.PI);g.scale(1-p,1-p);g.translate(-W/2,-H/2);g.globalAlpha=1-p}
-      else if(T==='shake'){g.translate((Math.random()-.5)*60*(1-p),(Math.random()-.5)*30*(1-p));g.globalAlpha=1-p}
-      g.drawImage(snapC,0,0,W,H);g.restore()}}
+  if(prev&&prev.tr&&(prev.tr.type==='black'||prev.tr.type==='white')){const d=trD(prev);if(q<d/2)dip(prev.tr.type,1-q/(d/2),W,H)}
   if(nx&&mc.tr&&(mc.tr.type==='black'||mc.tr.type==='white')){const d=trD(mc);if(rem<d/2)dip(mc.tr.type,1-rem/(d/2),W,H)}
+  const pc=prevCross(time);if(!pc)return;
+  // the outgoing clip is still playing: draw its live frame over the incoming one, leaving by the chosen effect
+  const pv=pc.pv,m=media.get(pv.mid);if(!m)return;const el=m.type==='image'?m.el:tPlayer(pv).el;if(m.type==='video'&&el.readyState<2)return;
+  const T=pv.tr.type,p=T==='fade'?pc.p*pc.p*(3-2*pc.p):eo(pc.p),V=evalP(pv,time-pv._s),V2={...V};let a=1;
+  g.save();
+  if(T==='fade'||T==='zoom'||T==='blur'||T==='spin'||T==='shake')a=1-p;
+  if(T==='slideL')g.translate(-p*W,0);else if(T==='slideR')g.translate(p*W,0);else if(T==='slideU')g.translate(0,-p*H);else if(T==='slideD')g.translate(0,p*H);
+  else if(T==='zoom'){g.translate(W/2,H/2);g.scale(1+p*.6,1+p*.6);g.translate(-W/2,-H/2)}
+  else if(T==='spin'){g.translate(W/2,H/2);g.rotate(p*Math.PI);g.scale(1-p*.9,1-p*.9);g.translate(-W/2,-H/2)}
+  else if(T==='shake')g.translate((Math.random()-.5)*60*(1-p),(Math.random()-.5)*30*(1-p));
+  else if(T==='wipeL'){g.beginPath();g.rect(0,0,W*(1-p),H);g.clip()}else if(T==='wipeR'){g.beginPath();g.rect(W*p,0,W*(1-p),H);g.clip()}
+  else if(T==='circle'){g.beginPath();g.rect(0,0,W,H);g.arc(W/2,H/2,p*Math.hypot(W,H)/2,0,7);g.clip('evenodd')}
+  g.globalAlpha=a;V2.opacity=V.opacity*a;drawMedia(viewOf(pv,V),el,W/2+V.x*W,H/2+V.y*H,V2,W,H,true);
+  g.restore();
 }
 const FILTERS=[['none','بدون',''],['bw','أبيض وأسود','grayscale(1) contrast(1.1)'],['warm','دافئ','sepia(.3) saturate(1.3) brightness(1.03)'],['cool','بارد','saturate(.85) hue-rotate(-12deg) brightness(1.05)'],['vivid','حيوي','saturate(1.6) contrast(1.1)'],['vintage','قديم','sepia(.55) contrast(1.1) brightness(.95)'],['fade','باهت','contrast(.8) saturate(.75) brightness(1.12)'],['drama','دراما','contrast(1.45) saturate(.85) brightness(.9)'],['dream','حالم','blur(1.5px) saturate(1.25) brightness(1.08)']];
 function filterStr(c){const f=(FILTERS.find(x=>x[0]===c.filter)||FILTERS[0])[2],a=c.adj||{};const s=`${f} brightness(${a.b??1}) contrast(${a.c??1}) saturate(${a.s??1})`.trim();return s==='brightness(1) contrast(1) saturate(1)'?'none':s}
@@ -947,6 +958,8 @@ function addOverlay(m){if(!m||m.type==='audio')return;commit();const o={id:uid()
 const KARA=[['none','بدون'],['color','تلوين'],['pop','تكبير'],['box','صندوق'],['reveal','ظهور']];
 function wordTimes(t){const key=t.text+'|'+t.dur;if(t._wtk===key)return t._wt;const ws=String(t.text).split(/\s+/).filter(Boolean),tot=ws.reduce((a,w)=>a+w.length+1,0)||1,span=t.dur*.92;let acc=0;
   t._wt=ws.map(w=>{const s0=acc/tot*span;acc+=w.length+1;return[s0,acc/tot*span]});t._wtk=key;return t._wt}
+const hexA=(h,a)=>{const [r1,g1,b1]=hex2rgb(h);return `rgba(${r1},${g1},${b1},${a})`};
+function txtShadow(t,col){g.shadowColor=t.glow?col:hexA(t.shColor||'#000000',.75);g.shadowBlur=t.size*.5*t.shadow;g.shadowOffsetX=t.glow?0:t.size*.1*(t.shX??0);g.shadowOffsetY=t.glow?0:t.size*.1*(t.shY??.6)}
 function drawKara(t,lines,lh,h,w){ // word-by-word: the word being spoken is highlighted; timing is spread over the line by word length
   const lt=time-t.start,wt=wordTimes(t),hl=t.hl||'#ffd36e',sty=t.kara,sp=g.measureText(' ').width;let wi=0;
   lines.forEach((l,li)=>{const ws=l.split(/\s+/).filter(Boolean),wd=ws.map(x=>g.measureText(x).width),tw=wd.reduce((a,b)=>a+b,0)+sp*Math.max(0,ws.length-1),y=-h/2+lh*(li+.5);
@@ -957,7 +970,7 @@ function drawKara(t,lines,lh,h,w){ // word-by-word: the word being spoken is hig
         else if(sty==='pop'&&cur){col=hl;const cx=xr-ww/2;g.translate(cx,y);g.scale(1.22,1.22);g.translate(-cx,-y)}
         else if(sty==='box'&&cur){g.fillStyle=hl;roundRect(xr-ww-t.size*.14,y-t.size*.62,ww+t.size*.28,t.size*1.24,t.size*.22);g.fill();col='#111111'}
         else if(sty==='reveal'&&cur)g.globalAlpha*=clamp((lt-s0)/.15,0,1);
-        if(t.shadow>0&&!(sty==='box'&&cur)){g.shadowColor=t.glow?col:'rgba(0,0,0,.7)';g.shadowBlur=t.size*.5*t.shadow;g.shadowOffsetY=t.glow?0:t.size*.06*t.shadow}
+        if(t.shadow>0&&!(sty==='box'&&cur))txtShadow(t,col);
         if(t.stroke>0){g.lineJoin='round';g.lineWidth=t.size*.12*t.stroke;g.strokeStyle=t.strokeColor;g.strokeText(word,xr,y);g.shadowColor='transparent'}
         g.fillStyle=col;g.fillText(word,xr,y);g.restore()}
       xr-=ww+sp})});
@@ -1016,7 +1029,7 @@ function split(){
   if(!s||!hitsTime(sel.k,s)){const mc=activeMain(time);if(mc){sel={k:'m',id:mc.id};s=mc}else return toast('حرّك المؤشر فوق مقطع عشان تقسمه')}
   const k=sel.k,arr=list(k),i=arr.indexOf(s);
   const cpk=(o)=>(s.kf||[]).map(k=>({...k,t:k.t-o,ease:Array.isArray(k.ease)?[...k.ease]:k.ease}));
-  if(k==='m'){const at=mtime(s,time-s._s);if(at-s.in<.05||s.out-at<.05)return;commit();const n={...s,id:uid(),in:at,kf:cpk(time-s._s)};s.out=at;arr.splice(i+1,0,n);sel={k,id:n.id}}
+  if(k==='m'){const at=mtime(s,time-s._s);if(at-s.in<.05||s.out-at<.05)return;commit();const n={...s,id:uid(),in:at,kf:cpk(time-s._s)};delete s.tr;s.out=at;arr.splice(i+1,0,n);sel={k,id:n.id}}
   else if(k==='t'){const at=time-s.start;if(at<.05||s.dur-at<.05)return;commit();const n={...s,id:uid(),start:time,dur:s.dur-at,kf:cpk(at)};s.dur=at;arr.splice(i+1,0,n);sel={k,id:n.id}}
   else{const at=mtime(s,time-s.start);if(at-s.in<.05||s.out-at<.05)return;commit();const n={...s,id:uid(),in:at,start:time,kf:cpk(time-s.start)};s.out=at;arr.splice(i+1,0,n);sel={k,id:n.id}}
   refresh();toast(k==='m'?'تم التقسيم. اضغط ⇄ بين المقطعين عشان تضيف انتقال':'تم التقسيم');
@@ -1049,7 +1062,7 @@ function renderTimeline(){
   const hd='<i class="h l"></i><i class="h r"></i>';
   const kd=(it,k)=>(it.kf||[]).map((f,i)=>`<i class="kd${Math.abs(f.t-(time-itemStart(k,it)))<KTOL?' on':''}" data-ki="${i}" data-kt="${itemStart(k,it)+f.t}" style="left:${f.t*pps}px"></i>`).join('');
   $('#laneM').innerHTML=P.main.map(c=>{const m=media.get(c.mid)||{};return `<div class="clip v${cls('m',c.id)}" data-k="m" data-id="${c.id}" style="left:${c._s*pps}px;width:${dur(c)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(c,'m')}${m.wave?`<span class="vw${c.vol===0?' mute':''}" style="background-image:url('${m.wave}');background-size:${m.duration/(c.speed||1)*pps}px 100%;background-position:${-c.in/(c.speed||1)*pps}px 0"></span>`:''}<span class="lbl">${esc(m.name||'')} · ${dur(c).toFixed(1)}ث</span></div>`}).join('')||'<div class="empty-lane">اضغط + على أي فيديو أو صورة في الوسائط</div>';
-  $('#laneM').insertAdjacentHTML('beforeend',P.main.slice(0,-1).map(c=>`<button class="trb${c.tr&&c.tr.type!=='none'?' has':''}${sel&&sel.k==='tr'&&sel.id===c.id?' on':''}" data-tr="${c.id}" style="left:${(c._s+dur(c))*pps-11}px" title="انتقال">⇄</button>`).join(''));
+  $('#laneM').insertAdjacentHTML('beforeend',P.main.slice(0,-1).map(c=>`<button class="trb${c.tr&&c.tr.type!=='none'?' has':''}${sel&&sel.k==='tr'&&sel.id===c.id?' on':''}" data-tr="${c.id}" style="left:${(c._s+dur(c)-(isCross(c)?trD(c)/2:0))*pps-11}px" title="انتقال">⇄</button>`).join(''));
   $('#laneO').innerHTML=P.overlays.map(o=>{const m=media.get(o.mid)||{};return `<div class="clip v ovc${cls('o',o.id)}" data-k="o" data-id="${o.id}" style="left:${o.start*pps}px;width:${dur(o)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(o,'o')}<span class="lbl">⧉ ${esc(m.name||'')}</span></div>`}).join('')||(isMob()?'':'<div class="empty-lane">اضغط ⧉ على فيديو أو صورة في الوسائط عشان تحطها فوق الفيديو</div>');
   $('#laneM').insertAdjacentHTML('beforeend',isMob()?`<button id="addEnd" class="addend" style="left:${layout()*pps+8}px" aria-label="أضف فيديو">+</button>`:'');
   $('#laneT').innerHTML=P.texts.map(t=>`<div class="clip t${cls('t',t.id)}" data-k="t" data-id="${t.id}" style="left:${t.start*pps}px;width:${t.dur*pps}px">${hd}${kd(t,'t')}<span class="lbl">${esc(t.text)}</span></div>`).join('');
@@ -1125,11 +1138,11 @@ function placeClipBar(){
 const MT={
   none:[['text','نص',()=>addText()],['speech','كتابة تلقائية',()=>autoCaption(null,'m')],['music','صوت',()=>{libTab='sounds';renderLib();openSheet('lib')}],['mic','تسجيل',()=>toggleRec()],['list','النصوص',()=>openCaps()],['layers','طبقة',()=>{libTab='files';renderLib();openSheet('lib');toast('اضغط ⧉ على أي فيديو أو صورة')}],['sticker','ستيكر',()=>{libTab='stickers';renderLib();openSheet('lib')}],['media','الوسائط',()=>{libTab='files';renderLib();openSheet('lib')}],['settings','المشروع',()=>openSheet('props')]],
   m:[['cut','تقسيم',()=>split()],['speech','كتابة تلقائية',()=>autoCaption(getSel(),sel.k)],['speed','السرعة','السرعة'],['vol','الصوت','pVol'],['adjust','ضبط','فلتر'],['fx','تأثير','تأثيرات'],['crop','قص','قص الصورة'],['voice','مغيّر الصوت','مغيّر الصوت'],['mask','قناع','القناع'],['green','شاشة خضراء','الشاشة الخضراء'],['silence','حذف الصمت','حذف الأجزاء'],['extract','استخراج الصوت',()=>{const s=getSel();if(s)extractAudio(s)}],['move','التحريك','كي فريم وتحريك']],
-  t:[['cut','تقسيم',()=>split()],['font','الخط','font'],['style','التنسيق','style'],['anim','الحركة','anim'],['kf','كي فريم','kf']],
+  t:[['cut','تقسيم',()=>split()],['font','الخط','font'],['style','الشكل','shape'],['style','اللون','color'],['text','الحد','stroke'],['sticker','الظل','shadow'],['media','الخلفية','bg'],['list','المحاذاة','align'],['adjust','المسافات','spacing'],['anim','الحركة','anim'],['kf','كي فريم','kf']],
   a:[['cut','تقسيم',()=>split()],['vol','الصوت','pVol'],['voice','مغيّر الصوت','مغيّر الصوت'],['speech','كتابة تلقائية',()=>autoCaption(getSel(),sel.k)],['silence','حذف الصمت','حذف الأجزاء'],['kf','كي فريم','كي فريم للصوت']]};
 MT.o=MT.m.filter(x=>x[1]!=='استخراج الصوت');
 function openSec(key){
-  if(sel&&sel.k==='t'&&['font','style','anim','kf'].includes(key)){$('#props')._tab=key;renderProps();openSheet('props');return}
+  if(sel&&sel.k==='t'&&['font','shape','color','stroke','shadow','bg','align','spacing','anim','kf'].includes(key)){$('#props')._tab=key;renderProps();openSheet('props');return}
   openSheet('props');setTimeout(()=>{const pr=$('#props');let el=pr.querySelector('#'+key);if(!el)el=[...pr.querySelectorAll('h4.sec')].find(h=>h.textContent.includes(key));if(el)el.scrollIntoView({block:'start',behavior:'smooth'})},80);
 }
 const ICONS={cut:'<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
@@ -1230,20 +1243,24 @@ function renderProps(){
     const sw=(attr,cur)=>COLORS.map(c=>`<button data-${attr}="${c}" class="${c===cur?'on':''}" style="background:${c}" aria-label="${c}"></button>`).join('');
     const chips=(attr,arr,cur)=>`<div class="chips">${arr.map(([v,n])=>`<button data-${attr}="${v}" class="${v===cur?'on':''}">${n}</button>`).join('')}</div>`;
     const rng=(id,lab,min,max,step,v,show)=>`<div class="field"><label for="${id}">${lab} · <span id="${id}V">${show}</span></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${v}"></div>`;
+    const tr2=(k,lab,min,max,step,f,def)=>{const v=s[k]??def??0,show=f==='%'?Math.round(v*100)+'%':f==='px'?v+'px':f==='x'?(+v).toFixed(2)+'×':(+v).toFixed(1);return `<div class="field"><label for="tk_${k}">${lab} · <span id="tk_${k}V">${show}</span></label><input type="range" id="tk_${k}" data-tk="${k}" data-tf="${f}" min="${min}" max="${max}" step="${step}" value="${v}"></div>`};
     const body={
       font:`<div class="fgrid">${allFonts().map(([f,n,c])=>`<button data-font="${f}" class="${f===s.font?'on':''}" style="font-family:'${f}',Cairo"><span>أبجد</span><small>${esc(n)}${c?' · خطك':''}</small></button>`).join('')}
         <label class="fup" for="fontFile"><b>＋</b>خط من جهازك<small>TTF · OTF · WOFF</small></label></div>
         ${rng('pSize','الحجم',16,Math.round(cv.width*.25),1,s.size,s.size)}
-        <div class="field"><span class="lab">السماكة</span>${chips('weight',[[400,'عادي'],[700,'عريض'],[800,'أعرض']],+s.weight)}</div>
-        <div class="field"><span class="lab">المحاذاة</span>${chips('align',[['right','يمين'],['center','وسط'],['left','يسار']],s.align)}</div>`,
-      style:`<div class="field"><span class="lab">قوالب جاهزة</span><div class="presets">${PRESETS.map(([n,p],i)=>`<button data-preset="${i}" style="font-family:'${p.font}';color:${p.color};${p.bg?`background:${p.bgColor};`:''}${p.stroke?`-webkit-text-stroke:1px ${p.strokeColor};`:''}${p.glow?`text-shadow:0 0 8px ${p.color};`:''}">${n}</button>`).join('')}</div></div>
-        <div class="field"><span class="lab">لون النص</span><div class="sw">${sw('color',s.color)}<input type="color" id="pColor" value="${s.color}" aria-label="لون مخصص"></div></div>
-        ${rng('pStroke','الإطار',0,1.5,.05,s.stroke,Math.round(s.stroke*100)+'%')}
-        <div class="field"><span class="lab">لون الإطار</span><div class="sw">${sw('scolor',s.strokeColor)}</div></div>
-        ${rng('pShadow','الظل',0,1,.05,s.shadow,Math.round(s.shadow*100)+'%')}
-        <div class="field"><label><input type="checkbox" id="pGlow" ${s.glow?'checked':''}> توهّج بلون النص (نيون)</label></div>
-        <div class="field"><label><input type="checkbox" id="pBg" ${s.bg?'checked':''}> خلفية خلف النص</label></div>
+        <div class="field"><span class="lab">السماكة</span>${chips('weight',[[400,'عادي'],[700,'عريض'],[800,'أعرض']],+s.weight)}</div>`,
+      shape:`<div class="field"><span class="lab">قوالب جاهزة</span><div class="presets">${PRESETS.map(([n,p],i)=>`<button data-preset="${i}" style="font-family:'${p.font}';color:${p.color};${p.bg?`background:${p.bgColor};`:''}${p.stroke?`-webkit-text-stroke:1px ${p.strokeColor};`:''}${p.glow?`text-shadow:0 0 8px ${p.color};`:''}">${n}</button>`).join('')}</div></div>
         ${rng('pOp','الشفافية',.1,1,.05,s.opacity,Math.round(s.opacity*100)+'%')}`,
+      color:`<div class="field"><span class="lab">لون النص</span><div class="sw">${sw('color',s.color)}<input type="color" id="pColor" value="${s.color}" aria-label="لون مخصص"></div></div>`,
+      stroke:`${tr2('stroke','السماكة',0,1.5,.05,'%')}<div class="field"><span class="lab">لون الحد</span><div class="sw">${sw('scolor',s.strokeColor)}<input type="color" id="pSColor" value="${s.strokeColor}" aria-label="لون مخصص"></div></div>`,
+      shadow:`${tr2('shadow','القوة',0,1,.05,'%')}<div class="field"><span class="lab">لون الظل</span><div class="sw">${sw('shc',s.shColor||'#000000')}</div></div>
+        ${tr2('shX','أفقي',-3,3,.1,'n',0)}${tr2('shY','رأسي',-3,3,.1,'n',.6)}
+        <div class="field"><label class="ckl"><input type="checkbox" id="pGlow" ${s.glow?'checked':''}> توهّج بلون النص (نيون)</label></div>`,
+      bg:`<div class="field"><label class="ckl"><input type="checkbox" id="pBg" ${s.bg?'checked':''}> خلفية خلف النص</label></div>
+        <div class="field"><span class="lab">لون الخلفية</span><div class="sw">${sw('bgc',s.bgHex||'#000000')}<input type="color" id="pBgColor" value="${s.bgHex||'#000000'}" aria-label="لون مخصص"></div></div>
+        ${tr2('bgOp','الشفافية',0,1,.05,'%',.62)}${tr2('bgR','تدوير الزوايا',0,.6,.01,'%',.25)}${tr2('bgPad','المسافة حول النص',.05,1,.01,'%',.35)}`,
+      align:`<div class="field"><span class="lab">المحاذاة</span><div class="alg">${[['right','يمين','M21 6H3M21 12H9M21 18H7'],['center','وسط','M21 6H3M17 12H7M19 18H5'],['left','يسار','M21 6H3M15 12H3M17 18H3']].map(([k,n,d])=>`<button data-align="${k}" class="${s.align===k?'on':''}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="${d}"/></svg>${n}</button>`).join('')}</div></div>`,
+      spacing:`${tr2('ls','بين الحروف',-5,30,.5,'px',0)}${tr2('lh','بين الأسطر',.8,2.5,.05,'x',1.3)}`,
       anim:`<div class="field"><span class="lab">حركة الدخول</span>${chips('ain',ANIM_IN,s.ain)}</div>
         <div class="field"><span class="lab">حركة الخروج</span>${chips('aout',ANIM_OUT,s.aout)}</div>
         <div class="field"><span class="lab">🔤 كلمة بكلمة</span>${chips('kara',KARA,s.kara||'none')}</div>
@@ -1253,7 +1270,7 @@ function renderProps(){
       kf:kfPanel(s,'t')};
     el.innerHTML=`<h3>خصائص النص ${x}</h3>
     <div class="field"><label for="pText">النص</label><textarea id="pText" dir="rtl">${esc(s.text)}</textarea></div>
-    <div class="tabs">${[['font','الخط'],['style','التنسيق'],['anim','الحركة'],['kf','◆ كي فريم']].map(([k,n])=>`<button data-tab="${k}" class="${k===tab?'on':''}">${n}</button>`).join('')}</div>${body[tab]}`;
+    <div class="tabs ttabs">${[['font','الخط'],['shape','الشكل'],['color','اللون'],['stroke','الحد'],['shadow','الظل'],['bg','الخلفية'],['align','المحاذاة'],['spacing','المسافات'],['anim','الحركة'],['kf','◆ كي فريم']].map(([k,n])=>`<button data-tab="${k}" class="${k===tab?'on':''}">${n}</button>`).join('')}</div>${body[tab]||body.font}`;
     let c=0;const once=()=>{if(!c){commit();c=1}};
     const set=(k,v,re=true)=>{commit();s[k]=v;if(re)renderProps()};
     $('#pText').addEventListener('focus',()=>commit());
@@ -1272,6 +1289,11 @@ function renderProps(){
     const bindR=(id,k,f)=>{const r=$('#'+id);if(!r)return;r.addEventListener('pointerdown',once);r.addEventListener('input',e=>{once();s[k]=+e.target.value;$('#'+id+'V').textContent=f(s[k])})};
     bindR('pSize','size',v=>v);bindR('pStroke','stroke',v=>Math.round(v*100)+'%');bindR('pShadow','shadow',v=>Math.round(v*100)+'%');bindR('pOp','opacity',v=>Math.round(v*100)+'%');
     const pc=$('#pColor');if(pc)pc.addEventListener('input',e=>{once();s.color=e.target.value});
+    el.querySelectorAll('[data-tk]').forEach(rg=>{rg.addEventListener('pointerdown',once);rg.addEventListener('input',e=>{once();const k=rg.dataset.tk,f=rg.dataset.tf,v=+e.target.value;s[k]=v;if(k==='bgOp'||k==='bgR'||k==='bgPad')s.bg=true;$('#tk_'+k+'V').textContent=f==='%'?Math.round(v*100)+'%':f==='px'?v+'px':f==='x'?v.toFixed(2)+'×':v.toFixed(1)})});
+    el.querySelectorAll('[data-shc]').forEach(b=>b.onclick=()=>{commit();s.shColor=b.dataset.shc;if(!s.shadow)s.shadow=.6;s.glow=false;renderProps()});
+    el.querySelectorAll('[data-bgc]').forEach(b=>b.onclick=()=>{commit();s.bgHex=b.dataset.bgc;s.bg=true;renderProps()});
+    const pbc=$('#pBgColor');if(pbc)pbc.addEventListener('input',e=>{once();s.bgHex=e.target.value;s.bg=true});
+    const psc=$('#pSColor');if(psc)psc.addEventListener('input',e=>{once();s.strokeColor=e.target.value;if(!s.stroke)s.stroke=.6});
     const pg=$('#pGlow');if(pg)pg.onchange=e=>set('glow',e.target.checked,false);
     const pb=$('#pBg');if(pb)pb.onchange=e=>set('bg',e.target.checked,false);
     const pd=$('#pDur');if(pd)pd.onchange=e=>{commit();s.dur=Math.max(.2,+e.target.value||1);refresh()};
@@ -1440,6 +1462,7 @@ async function loadMuxer(){if(window.Mp4Muxer)return;await new Promise((res,rej)
 async function seekFrame(fps){
   const waits=[],tol=.5/fps,need=(el,t)=>{if(!el)return;if(Math.abs(el.currentTime-t)>tol||el.readyState<2)waits.push(new Promise(r=>{const d=()=>{el.removeEventListener('seeked',d);r()};el.addEventListener('seeked',d);el.currentTime=t;setTimeout(d,3000)}))};
   const mc=activeMain(time);if(mc){const m=media.get(mc.mid);if(m&&m.type==='video')need(m.el,mtime(mc,time-mc._s))}
+  const pc=prevCross(time);if(pc){const m=media.get(pc.pv.mid);if(m&&m.type==='video')need(tPlayer(pc.pv).el,mtime(pc.pv,time-pc.pv._s))}
   for(const o of P.overlays){const m=media.get(o.mid);if(m&&m.type==='video'&&time>=o.start&&time<o.start+dur(o))need(oPlayer(o).el,mtime(o,time-o.start))}
   await Promise.all(waits);
 }
@@ -1453,7 +1476,7 @@ async function renderAudioOffline(T){ // mix every sound offline (volume, fades,
     const v=voice&&voice!=='none'?buildVoice(voice,oc,ready):null;if(v&&v.input){src.connect(v.input);v.output.connect(gn)}else src.connect(gn);gn.connect(oc.destination);
     src.start(st,c.in,Math.max(.01,c.out-c.in))};
   layout();
-  for(const c of P.main){const m=media.get(c.mid);if(m&&m.type==='video')await place(c,c._s,m.file,c.vol??1,c.voice,0,0)}
+  for(const [i,c] of P.main.entries()){const m=media.get(c.mid),pv=P.main[i-1];if(m&&m.type==='video')await place(c,c._s,m.file,c.vol??1,c.voice,pv&&isCross(pv)?trD(pv):0,isCross(c)?trD(c):0)}
   for(const o of P.overlays){const m=media.get(o.mid);if(m&&m.type==='video')await place(o,o.start,m.file,o.vol??1,o.voice,0,0)}
   for(const a of P.audios){const m=media.get(a.mid);if(m)await place(a,a.start,m.file,a.vol??1,a.voice,a.fin||0,a.fout||0)}
   return oc.startRendering();
@@ -1488,9 +1511,9 @@ async function startFast(){ // frame-by-frame render with WebCodecs: each frame 
     const ovVideoAt=t=>P.overlays.some(o=>{const m=media.get(o.mid);return m&&m.type==='video'&&t>=o.start&&t<o.start+dur(o)});
     while(i<N&&!cancelled&&!encErr){
       time=i/fps;const mc=activeMain(time),m=mc&&media.get(mc.mid);
-      if(m&&m.type==='video'&&m.el.requestVideoFrameCallback&&!ovVideoAt(time)){
+      if(m&&m.type==='video'&&m.el.requestVideoFrameCallback&&!ovVideoAt(time)&&!prevCross(time)){
         // Play the clip faster than real time and take each decoded frame as it arrives; seeking frame by frame is far slower.
-        const el=m.el,sp=mc.speed||1,segEnd=Math.min(N/fps,mc._s+dur(mc)),from=mtime(mc,time-mc._s),startI=i;
+        const el=m.el,sp=mc.speed||1,nxc=P.main[P.main.indexOf(mc)+1],segEnd=Math.min(N/fps,mc._s+dur(mc),isCross(mc)&&nxc?nxc._s:1e9),from=mtime(mc,time-mc._s),startI=i;
         el.muted=true;el.currentTime=from;await new Promise(r=>{if(!el.seeking&&Math.abs(el.currentTime-from)<.02&&el.readyState>=2)return r();const d=()=>{el.removeEventListener('seeked',d);r()};el.addEventListener('seeked',d);setTimeout(d,3000)});
         el.playbackRate=Math.min(16,sp*FAST_RATE);await el.play().catch(()=>{});
         await new Promise(res=>{let done=false;const fin=()=>{if(!done){done=true;res()}},guard=setInterval(()=>{if(el.paused||el.ended)fin()},500);
