@@ -608,7 +608,9 @@ function sync(){
     else{if(!el.paused)el.pause();if(!el.seeking&&Math.abs(el.currentTime-w.t)>0.04)el.currentTime=w.t}
   }
 }
-function wrapLines(t){return String(t.text||' ').split('\n')}
+function wrapLines(t,maxW){ // keep long lines inside the frame: break at spaces once a line gets wider than maxW (g.font must already be set)
+  const raw=String(t.text||' ').split('\n');if(!maxW||t.sticker)return raw;const out=[];
+  for(const l of raw){const ws=l.split(' ');let cur='';for(const w of ws){const tr=cur?cur+' '+w:w;if(cur&&g.measureText(tr).width>maxW){out.push(cur);cur=w}else cur=tr}out.push(cur)}return out}
 /* ---------- keyframes & easing ---------- */
 const KP=['x','y','scale','rot','opacity'],KTOL=1/30;
 // Everything else a keyframe can animate: any slider on a clip (nested paths like 'mask.w').
@@ -840,7 +842,7 @@ function draw(){
   drawOverlays(W,H);
   for(const t of P.texts){
     t._box=null;if(time<t.start||time>=t.start+t.dur)continue;
-    norm(t);const V=evalP(t,time-t.start);t._op=V.opacity;const lines=wrapLines(t),lh=t.size*(t.lh||1.3);try{g.letterSpacing=(t.ls||0)+'px'}catch(e){}g.font=`${t.weight} ${t.size}px "${t.font}", Cairo, sans-serif`;g.textBaseline='middle';g.direction='rtl';
+    norm(t);const V=evalP(t,time-t.start);t._op=V.opacity;const lh=t.size*(t.lh||1.3);try{g.letterSpacing=(t.ls||0)+'px'}catch(e){}g.font=`${t.weight} ${t.size}px "${t.font}", Cairo, sans-serif`;const lines=wrapLines(t,W*.9/Math.max(.05,V.scale)-t.size*.7);g.textBaseline='middle';g.direction='rtl';
     const w=Math.max(...lines.map(l=>g.measureText(l).width)),h=lh*lines.length,cx=V.x*W,cy=V.y*H,pad=t.size*.35,sc=V.scale;
     t._box={x:cx-(w/2+pad)*sc,y:cy-(h/2+pad*.6)*sc,w:(w+pad*2)*sc,h:(h+pad*1.2)*sc};
     const A=anim(t);
@@ -1067,7 +1069,8 @@ function renderTimeline(){
   $('#laneM').insertAdjacentHTML('beforeend',P.main.slice(0,-1).map(c=>`<button class="trb${c.tr&&c.tr.type!=='none'?' has':''}${sel&&sel.k==='tr'&&sel.id===c.id?' on':''}" data-tr="${c.id}" style="left:${(c._s+dur(c)-(isCross(c)?trD(c)/2:0))*pps-11}px" title="انتقال">${ic('swap',13)}</button>`).join(''));
   $('#laneO').innerHTML=P.overlays.map(o=>{const m=media.get(o.mid)||{};return `<div class="clip v ovc${cls('o',o.id)}" data-k="o" data-id="${o.id}" style="left:${o.start*pps}px;width:${dur(o)*pps}px;background-image:url('${m.thumb||''}')">${hd}${kd(o,'o')}<span class="lbl">${esc(m.name||'')}</span></div>`}).join('')||(isMob()?'':'<div class="empty-lane">اسحب أي مقطع لفوق عشان يصير طبقة، أو اختر طبقة من الوسائط</div>');
   $('#laneM').insertAdjacentHTML('beforeend',isMob()?`<button id="addEnd" class="addend" style="left:${layout()*pps+8}px" aria-label="أضف فيديو">+</button>`:'');
-  $('#laneT').innerHTML=P.texts.map(t=>`<div class="clip t${cls('t',t.id)}" data-k="t" data-id="${t.id}" style="left:${t.start*pps}px;width:${t.dur*pps}px">${hd}${kd(t,'t')}<span class="lbl">${esc(t.text)}</span></div>`).join('');
+  const tEnds=[];[...P.texts].sort((a,b)=>a.start-b.start).forEach(t=>{let r=tEnds.findIndex(e=>e<=t.start+.01);if(r<0)r=tEnds.length<6?tEnds.length:5;tEnds[r]=t.start+t.dur;t._row=r});const TR=Math.max(1,tEnds.length);const lh0=isMob()?46:52,tH=TR>1?lh0+(TR-1)*30+'px':'';$('#laneT').parentNode.style.height=tH;const lb=document.querySelector('.labels div');if(lb)lb.style.height=tH;requestAnimationFrame(()=>{const ch=$('#addAudChip'),op=ch.offsetParent;if(op)ch.style.top=($('#laneA').parentNode.getBoundingClientRect().top-op.getBoundingClientRect().top+op.scrollTop+8)+'px'});
+  $('#laneT').innerHTML=P.texts.map(t=>`<div class="clip t${cls('t',t.id)}" data-k="t" data-id="${t.id}" style="top:calc(${t._row}*100%/${TR});height:calc(100%/${TR} - ${TR>1?2:0}px);bottom:auto;left:${t.start*pps}px;width:${t.dur*pps}px">${hd}${kd(t,'t')}<span class="lbl">${esc(t.text)}</span></div>`).join('');
   const ends=[];[...P.audios].sort((a,b)=>a.start-b.start).forEach(a=>{let r=ends.findIndex(e=>e<=a.start+.01);if(r<0)r=ends.length<3?ends.length:2;ends[r]=a.start+dur(a);a._row=r});const R=Math.max(1,ends.length);
   $('#laneA').innerHTML=P.audios.map(a=>{const m=media.get(a.mid)||{};return `<div class="clip a${cls('a',a.id)}" data-k="a" data-id="${a.id}" style="top:calc(${a._row}*100%/${R});height:calc(100%/${R} - ${R>1?2:0}px);bottom:auto;left:${a.start*pps}px;width:${dur(a)*pps}px;background-image:url('${m.wave||''}');background-size:${(m.duration||1)/(a.speed||1)*pps}px 70%;background-position:${-a.in/(a.speed||1)*pps}px center">${hd}${kd(a,'a')}<span class="lbl">${esc(m.name||'')}</span></div>`}).join('');
 }
@@ -1091,7 +1094,7 @@ $('#inner').addEventListener('pointerdown',e=>{
     if(isMob()&&e.pointerType!=='mouse'&&!was){refresh();return}
     const h=e.target.closest('.h');layout();
     drag={type:h?(h.classList.contains('l')?'L':'R'):'move',k,item,x0:e.clientX,y0:e.clientY,snap:{...item},moved:false};
-    if(drag.type==='R'&&k!=='m'){const end=item.start+itemDur(k,item);drag.fol=list(k).filter(x=>x!==item&&x.start>=end-.01&&(k!=='a'||x._row===item._row)).map(x=>[x,x.start]);drag.gap=drag.fol.length?Math.min(...drag.fol.map(f=>f[1]))-end:0}
+    if(drag.type==='R'&&k!=='m'){const end=item.start+itemDur(k,item);drag.fol=list(k).filter(x=>x!==item&&x.start>=end-.01&&((k!=='a'&&k!=='t')||x._row===item._row)).map(x=>[x,x.start]);drag.gap=drag.fol.length?Math.min(...drag.fol.map(f=>f[1]))-end:0}
     refresh();
   }
   window.addEventListener('pointermove',onDrag);window.addEventListener('pointerup',endDrag,{once:true});window.addEventListener('pointercancel',endDrag,{once:true});
