@@ -58,6 +58,7 @@ h3 small{color:var(--mute);font-weight:400}
 #box{flex:1;min-height:0;display:grid;place-items:center;padding:14px;position:relative}
 #rotBadge{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:8;background:#000a;color:#fff;font:600 13px/1 ui-monospace,monospace;padding:5px 10px;border-radius:99px;direction:ltr;pointer-events:none}
 #rotBadge.on{background:var(--accent)}
+.plist{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto;margin:10px 0}.prow{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:6px}#ovCard .prow video{width:44px;height:64px;max-width:44px;margin:0;flex:0 0 44px;object-fit:cover;border-radius:8px;background:#000}.prow span{flex:1;text-align:right;font-weight:600;display:flex;flex-direction:column}.prow small{color:var(--mute);font-weight:400}.prow button{padding:8px 12px}
 .applyall{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}.applyall button{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}.applyall label{font-size:12.5px;color:var(--mute);display:flex;align-items:center;gap:6px}
 canvas#cv{border-radius:10px;box-shadow:0 20px 60px #0008;touch-action:none;background:#000;display:block}
 .ctrl{display:flex;align-items:center;justify-content:center;gap:14px;padding:6px 10px 10px;direction:ltr}
@@ -1477,7 +1478,16 @@ function showResult(blob,ext){const url=URL.createObjectURL(blob),name=`laqta-${
       else{const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()}
     };refresh();
 }
-let expOpt={q:'1080',fps:30};try{const o=JSON.parse(localStorage.getItem('laqta-exp')||'null');if(o)expOpt={...expOpt,...o}}catch(e){}
+function showParts(parts){const day=new Date().toISOString().slice(0,10),N=parts.length,name=i=>`laqta-${day}-part${i+1}.mp4`;
+  const urls=parts.map(b=>URL.createObjectURL(b));
+  const save1=async i=>{const b=parts[i];if(window.LaqtaAndroid)await saveAndroid(b,name(i));else if(dl){await dl.save({filename:name(i),data:b})}else{const a=document.createElement('a');a.href=urls[i];a.download=name(i);document.body.appendChild(a);a.click();a.remove();await new Promise(r=>setTimeout(r,400))}};
+  showOv(`<h2>الفيديو جاهز · ${N} ${N>2&&N<11?'أجزاء':'جزء'}</h2><div class="plist">${parts.map((b,i)=>`<div class="prow"><video src="${urls[i]}#t=0.1" muted playsinline preload="metadata"></video><span>الجزء ${i+1}<small>${(b.size/1048576).toFixed(1)} MB</small></span><button data-sp="${i}">${ic('dl',16)}</button></div>`).join('')}</div>
+    <div class="row"><button class="primary" id="saveAll">حفظ الكل</button><button id="closeV">رجوع للتحرير</button></div>`);
+  $('#closeV').onclick=()=>{hideOv();urls.forEach(u=>URL.revokeObjectURL(u))};
+  document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await save1(+b.dataset.sp);toast(`انحفظ الجزء ${+b.dataset.sp+1}`)}catch(e){if(!e||e.code!=='declined')toast('ما قدرنا نحفظ الملف')}b.disabled=false});
+  $('#saveAll').onclick=async()=>{const b=$('#saveAll');b.disabled=true;let n=0;for(let i=0;i<N;i++){b.textContent=`جاري الحفظ ${i+1}/${N}…`;try{await save1(i);n++}catch(e){if(e&&e.code==='declined')break}}b.disabled=false;b.textContent='حفظ الكل';toast(`انحفظ ${n} من ${N}`)};
+}
+let expOpt={q:'1080',fps:30,split:0};try{const o=JSON.parse(localStorage.getItem('laqta-exp')||'null');if(o)expOpt={...expOpt,...o}}catch(e){}
 const QUAL={'720':1,'1080':1.5,'4k':3};
 const canFast=()=>'VideoEncoder' in window&&'AudioEncoder' in window&&'VideoFrame' in window&&'AudioData' in window;
 function setPX(k){PX=k;const [w,h]=RATIOS[P.ratio];cv.width=Math.round(w*k/2)*2;cv.height=Math.round(h*k/2)*2}
@@ -1489,13 +1499,17 @@ function startExport(){
     showOv(`<h2>تصدير الفيديو</h2><p>${fmt(T,false)} · ${P.ratio}</p>
     <div class="field" style="text-align:right"><span class="lab">الجودة</span><div class="chips">${[['720','720p'],['1080','1080p · أفضل'],['4k','4K · أبطأ']].map(([q,n])=>`<button data-q="${q}" class="${expOpt.q===q?'on':''}">${n}</button>`).join('')}</div></div>
     <div class="field" style="text-align:right"><span class="lab">الفريمات في الثانية</span><div class="chips">${[24,30,60].map(f=>`<button data-fps="${f}" class="${expOpt.fps===f?'on':''}">${f}</button>`).join('')}</div></div>
+    <div class="field" style="text-align:right"><span class="lab">تقسيم حسب الحجم</span><div class="chips">${[[0,'بدون'],[16,'16 ميجا'],[30,'30 ميجا'],[50,'50 ميجا'],[100,'100 ميجا']].map(([v,n])=>`<button data-split="${v}" class="${(expOpt.split||0)===v?'on':''}">${n}</button>`).join('')}<input id="splitMB" type="number" min="1" max="4000" inputmode="numeric" placeholder="حجم ثاني" value="${[0,16,30,50,100].includes(expOpt.split||0)?'':expOpt.split}" style="width:96px"></div>
+    ${expOpt.split?`<p class="hint">ينقسم الفيديو لأجزاء، كل جزء أقل من ${expOpt.split} ميجا${fast?'':'. متصفحك ما يدعم التصدير السريع، فالتقسيم ما يشتغل هنا'}</p>`:''}</div>
     <p class="hint">${w}×${h} · ${fast?'تصدير سريع: غالباً أسرع من مدة الفيديو بكثير':'متصفحك ما يدعم التصدير السريع، فبياخذ نفس مدة الفيديو تقريباً'}</p>
     <div class="row"><button class="primary" id="expGo">صدّر</button><button id="expX">إلغاء</button></div>`);
     document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{expOpt.q=b.dataset.q;view()});
     document.querySelectorAll('[data-fps]').forEach(b=>b.onclick=()=>{expOpt.fps=+b.dataset.fps;view()});
+    document.querySelectorAll('[data-split]').forEach(b=>b.onclick=()=>{expOpt.split=+b.dataset.split;view()});
+    $('#splitMB').onchange=e=>{const v=Math.round(+e.target.value);expOpt.split=v>0?Math.min(4000,v):0;view()};
     $('#expX').onclick=hideOv;
     $('#expGo').onclick=()=>{try{localStorage.setItem('laqta-exp',JSON.stringify(expOpt))}catch(_){}
-      if(fast)startFast().catch(e=>{console.warn('fast export failed, using realtime',e);exporting=null;expCleanup();startRealtime()});else startRealtime()}};
+      if(fast)startFast().catch(e=>{if(e&&e.user){exporting=null;expCleanup();hideOv();return toast('الحجم صغير مرّة على هالجودة. اختر حجم أكبر أو جودة أقل')}console.warn('fast export failed, using realtime',e);exporting=null;expCleanup();startRealtime()});else startRealtime()}};
   view();
 }
 async function loadMuxer(){if(window.Mp4Muxer)return;await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.js';sc.onload=res;sc.onerror=()=>rej(new Error('muxer'));document.head.appendChild(sc)})}
@@ -1534,18 +1548,28 @@ async function startFast(){ // frame-by-frame render with WebCodecs: each frame 
   const ab=await renderAudioOffline(T);
   let acodec='aac',acfg={codec:'mp4a.40.2',sampleRate:ab.sampleRate,numberOfChannels:2,bitrate:192000};
   if(!(await AudioEncoder.isConfigSupported(acfg)).supported){acodec='opus';acfg={codec:'opus',sampleRate:ab.sampleRate,numberOfChannels:2,bitrate:160000};if(!(await AudioEncoder.isConfigSupported(acfg)).supported)throw new Error('no audio encoder')}
-  const target=new Mp4Muxer.ArrayBufferTarget();
-  const mux=new Mp4Muxer.Muxer({target,video:{codec:'avc',width:W,height:H,frameRate:fps},audio:{codec:acodec,numberOfChannels:2,sampleRate:ab.sampleRate},fastStart:'in-memory',firstTimestampBehavior:'offset'});
-  let encErr=null;
-  const ve=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>encErr=e});ve.configure(vcfg);
-  const ae=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:e=>encErr=e});ae.configure(acfg);
+  const newMux=()=>{const target=new Mp4Muxer.ArrayBufferTarget();return{target,mux:new Mp4Muxer.Muxer({target,video:{codec:'avc',width:W,height:H,frameRate:fps},audio:{codec:acodec,numberOfChannels:2,sampleRate:ab.sampleRate},fastStart:'in-memory',firstTimestampBehavior:'offset'})}};
+  let encErr=null,cur=newMux();const mux=cur.mux;
+  // Splitting by size: when a part gets close to the limit the next frame is forced to be a key frame, and the part
+  // closes right before it. Audio is encoded first and handed to each part for its own time range when the part closes.
+  const SPL=expOpt.split>0?expOpt.split*1048576*.94:0,parts=[],aCh=[],splitAt=new Set(),aRate=acfg.bitrate/8*1.04;let vMeta=null,aMeta=null,partT0=0,partBytes=0,frameB=vcfg.bitrate/8/fps;
+  if(SPL&&SPL<(vcfg.bitrate/8+aRate)*2){try{exporting=null}catch(_){}throw Object.assign(new Error('split-small'),{user:true})}
+  const closePart=t1=>{for(const [c,m,ts] of aCh)if(ts>=partT0&&ts<t1)cur.mux.addAudioChunk(c,ts===aCh[0][2]||!aMeta?m:{...m,decoderConfig:aMeta});cur.mux.finalize();parts.push(new Blob([cur.target.buffer],{type:'video/mp4'}));cur=newMux();partT0=t1;partBytes=0};
+  const onV=(c,m)=>{if(m&&m.decoderConfig)vMeta=m.decoderConfig;
+    if(SPL){if(c.type==='key'&&splitAt.has(c.timestamp)){closePart(c.timestamp);cur.mux.addVideoChunk(c,{decoderConfig:vMeta});}else cur.mux.addVideoChunk(c,m);partBytes+=c.byteLength;frameB=frameB*.9+c.byteLength*.1}
+    else mux.addVideoChunk(c,m)};
+  const ve=new VideoEncoder({output:onV,error:e=>encErr=e});ve.configure(vcfg);
+  const ae=new AudioEncoder({output:(c,m)=>{if(m&&m.decoderConfig)aMeta=m.decoderConfig;if(SPL)aCh.push([c,m,c.timestamp]);else mux.addAudioChunk(c,m)},error:e=>encErr=e});ae.configure(acfg);
   const L0=ab.getChannelData(0),R0=ab.numberOfChannels>1?ab.getChannelData(1):L0,CH=4800;
   for(let i=0;i<ab.length;i+=CH){const n=Math.min(CH,ab.length-i),buf=new Float32Array(n*2);buf.set(L0.subarray(i,i+n),0);buf.set(R0.subarray(i,i+n),n);
     const ad=new AudioData({format:'f32-planar',sampleRate:ab.sampleRate,numberOfFrames:n,numberOfChannels:2,timestamp:Math.round(i/ab.sampleRate*1e6),data:buf});ae.encode(ad);ad.close()}
+  if(SPL)await ae.flush(); // every audio chunk must be ready before the first part closes
   exporting={fast:true};const t0=performance.now();
   try{
     let i=0;
-    const emit=()=>{time=i/fps;draw();const vf=new VideoFrame(cv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});ve.encode(vf,{keyFrame:i%(fps*2)===0});vf.close();i++;
+    const emit=()=>{time=i/fps;draw();const ts=Math.round(i*1e6/fps);let key=i%(fps*2)===0;
+      if(SPL&&i>0&&partBytes+(ve.encodeQueueSize+3)*frameB+aRate*(ts-partT0)/1e6>SPL&&![...splitAt].some(x=>x>partT0)){splitAt.add(ts);key=true}
+      const vf=new VideoFrame(cv,{timestamp:ts,duration:Math.round(1e6/fps)});ve.encode(vf,{keyFrame:key});vf.close();i++;
       if(i%5===0){const p=i/N,el=(performance.now()-t0)/1000,eta=el/p-el;$('#expBar').style.width=(p*100).toFixed(1)+'%';$('#expPct').textContent=`${Math.round(p*100)}% · باقي تقريباً ${fmt(eta,false)}`}};
     const drain=async()=>{while(ve.encodeQueueSize>12)await new Promise(r=>setTimeout(r,4))};
     const ovVideoAt=t=>P.overlays.some(o=>{const m=media.get(o.mid);return m&&m.type==='video'&&t>=o.start&&t<o.start+dur(o)});
@@ -1573,8 +1597,10 @@ async function startFast(){ // frame-by-frame render with WebCodecs: each frame 
   }finally{exporting=null;sel=prevSel}
   if(cancelled){try{ve.close();ae.close()}catch(_){}expCleanup();hideOv();time=0;refresh();return toast('تم إلغاء التصدير')}
   if(encErr)throw encErr;
-  $('#expPct').textContent='اللمسات الأخيرة…';await ve.flush();await ae.flush();mux.finalize();ve.close();ae.close();
-  expCleanup();time=0;refresh();showResult(new Blob([target.buffer],{type:'video/mp4'}),'mp4');
+  $('#expPct').textContent='اللمسات الأخيرة…';await ve.flush();await ae.flush();
+  if(SPL){closePart(1e15);ve.close();ae.close();expCleanup();time=0;refresh();return showParts(parts)}
+  mux.finalize();ve.close();ae.close();
+  expCleanup();time=0;refresh();showResult(new Blob([cur.target.buffer],{type:'video/mp4'}),'mp4');
 }
 async function startRealtime(){
   if(!window.MediaRecorder||!cv.captureStream)return toast('متصفحك ما يدعم التصدير. جرّب Chrome أو Edge');
