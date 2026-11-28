@@ -1557,16 +1557,21 @@ async function startFast(){ // frame-by-frame render with WebCodecs: each frame 
   // closes right before it. Audio is encoded first and handed to each part for its own time range when the part closes.
   const SPL=expOpt.split>0?expOpt.split*1048576*.94:0,parts=[],aCh=[],aRate=acfg.bitrate/8*1.04;let vMeta=null,aMeta=null,partT0=0,partBytes=0,frameB=vcfg.bitrate/8/fps,splitReq=null,lagS=2.2;
   if(SPL&&SPL<(vcfg.bitrate/8+aRate)*2){try{exporting=null}catch(_){}throw Object.assign(new Error('split-small'),{user:true})}
-  const closePart=t1=>{for(const [c,m,ts] of aCh)if(ts>=partT0&&ts<t1)cur.mux.addAudioChunk(c,ts===aCh[0][2]||!aMeta?m:{...m,decoderConfig:aMeta});cur.mux.finalize();parts.push(new Blob([cur.target.buffer],{type:'video/mp4'}));cur=newMux();partT0=t1;partBytes=0};
+  // Parts are only built at the very end (after the encoders flush), from the kept chunks; flushing the audio encoder early fails on some phones.
+  const vCh=[],cuts=[0];
+  const buildParts=()=>{cuts.push(1e15);for(let k=0;k<cuts.length-1;k++){const a=cuts[k],b=cuts[k+1],pm=newMux();let fv=true,fa=true;
+    for(const [c,m] of vCh)if(c.timestamp>=a&&c.timestamp<b){pm.mux.addVideoChunk(c,fv?{...(m||{}),decoderConfig:vMeta}:m);fv=false}
+    for(const [c,m] of aCh)if(c.timestamp>=a&&c.timestamp<b){pm.mux.addAudioChunk(c,fa?{...(m||{}),decoderConfig:aMeta}:m);fa=false}
+    if(!fv){pm.mux.finalize();parts.push(new Blob([pm.target.buffer],{type:'video/mp4'}))}}};
+  const closePart=t1=>{cuts.push(t1);partT0=t1;partBytes=0};
   const onV=(c,m)=>{if(m&&m.decoderConfig)vMeta=m.decoderConfig;
-    if(SPL){if(c.type==='key'&&splitReq!==null&&c.timestamp>=splitReq){lagS=Math.max(.1,(c.timestamp-splitReq)/1e6*1.3+.1);splitReq=null;closePart(c.timestamp);cur.mux.addVideoChunk(c,{decoderConfig:vMeta})}else cur.mux.addVideoChunk(c,m);partBytes+=c.byteLength;frameB=frameB*.9+c.byteLength*.1}
+    if(SPL){if(c.type==='key'&&splitReq!==null&&c.timestamp>=splitReq){lagS=Math.max(.1,(c.timestamp-splitReq)/1e6*1.3+.1);splitReq=null;closePart(c.timestamp)}vCh.push([c,m]);partBytes+=c.byteLength;frameB=frameB*.9+c.byteLength*.1}
     else mux.addVideoChunk(c,m)};
   const ve=new VideoEncoder({output:onV,error:e=>encErr=e});ve.configure(vcfg);
-  const ae=new AudioEncoder({output:(c,m)=>{if(m&&m.decoderConfig)aMeta=m.decoderConfig;if(SPL)aCh.push([c,m,c.timestamp]);else mux.addAudioChunk(c,m)},error:e=>encErr=e});ae.configure(acfg);
+  const ae=new AudioEncoder({output:(c,m)=>{if(m&&m.decoderConfig)aMeta=m.decoderConfig;if(SPL)aCh.push([c,m]);else mux.addAudioChunk(c,m)},error:e=>encErr=e});ae.configure(acfg);
   const L0=ab.getChannelData(0),R0=ab.numberOfChannels>1?ab.getChannelData(1):L0,CH=4800;
   for(let i=0;i<ab.length;i+=CH){const n=Math.min(CH,ab.length-i),buf=new Float32Array(n*2);buf.set(L0.subarray(i,i+n),0);buf.set(R0.subarray(i,i+n),n);
     const ad=new AudioData({format:'f32-planar',sampleRate:ab.sampleRate,numberOfFrames:n,numberOfChannels:2,timestamp:Math.round(i/ab.sampleRate*1e6),data:buf});ae.encode(ad);ad.close()}
-  if(SPL)await ae.flush(); // every audio chunk must be ready before the first part closes
   exporting={fast:true};const t0=performance.now();
   try{
     let i=0;
@@ -1601,7 +1606,7 @@ async function startFast(){ // frame-by-frame render with WebCodecs: each frame 
   if(cancelled){try{ve.close();ae.close()}catch(_){}expCleanup();hideOv();time=0;refresh();return toast('تم إلغاء التصدير')}
   if(encErr)throw encErr;
   $('#expPct').textContent='اللمسات الأخيرة…';await ve.flush();await ae.flush();
-  if(SPL){closePart(1e15);ve.close();ae.close();expCleanup();time=0;refresh();return showParts(parts)}
+  if(SPL){buildParts();ve.close();ae.close();expCleanup();time=0;refresh();return showParts(parts)}
   mux.finalize();ve.close();ae.close();
   expCleanup();time=0;refresh();showResult(new Blob([cur.target.buffer],{type:'video/mp4'}),'mp4');
 }
