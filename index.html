@@ -58,6 +58,7 @@ h3 small{color:var(--mute);font-weight:400}
 #box{flex:1;min-height:0;display:grid;place-items:center;padding:14px;position:relative}
 #rotBadge{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:8;background:#000a;color:#fff;font:600 13px/1 ui-monospace,monospace;padding:5px 10px;border-radius:99px;direction:ltr;pointer-events:none}
 #rotBadge.on{background:var(--accent)}
+.applyall{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}.applyall button{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}.applyall label{font-size:12.5px;color:var(--mute);display:flex;align-items:center;gap:6px}
 canvas#cv{border-radius:10px;box-shadow:0 20px 60px #0008;touch-action:none;background:#000;display:block}
 .ctrl{display:flex;align-items:center;justify-content:center;gap:14px;padding:6px 10px 10px;direction:ltr}
 .ctrl button{background:transparent;border:0;color:var(--mute);font-size:16px;padding:6px}
@@ -1304,10 +1305,15 @@ function renderProps(){
       kf:kfPanel(s,'t')};
     el.innerHTML=`<h3>خصائص النص ${x}</h3>
     <div class="field"><label for="pText">النص</label><textarea id="pText" dir="rtl">${esc(s.text)}</textarea></div>
-    <div class="tabs ttabs">${[['font','الخط'],['shape','الشكل'],['color','اللون'],['stroke','الحد'],['shadow','الظل'],['bg','الخلفية'],['align','المحاذاة'],['spacing','المسافات'],['anim','الحركة'],['kf','كي فريم']].map(([k,n])=>`<button data-tab="${k}" class="${k===tab?'on':''}">${n}</button>`).join('')}</div>${body[tab]||body.font}`;
+    <div class="tabs ttabs">${[['font','الخط'],['shape','الشكل'],['color','اللون'],['stroke','الحد'],['shadow','الظل'],['bg','الخلفية'],['align','المحاذاة'],['spacing','المسافات'],['anim','الحركة'],['kf','كي فريم']].map(([k,n])=>`<button data-tab="${k}" class="${k===tab?'on':''}">${n}</button>`).join('')}</div>${body[tab]||body.font}
+    ${s.sticker||P.texts.filter(t=>!t.sticker).length<2?'':`<div class="applyall"><button id="pAll" class="primary">${ic('copy',16)} تطبيق على كل النصوص</button><label><input type="checkbox" id="pAllPos"> حتى المكان والحجم</label></div>`}`;
     let c=0;const once=()=>{if(!c){commit();c=1}};
     const set=(k,v,re=true)=>{commit();s[k]=v;if(re)renderProps()};
     $('#pText').addEventListener('focus',()=>commit());
+    if($('#pAll'))$('#pAll').onclick=()=>{ // copy this text's look (font, colours, stroke, shadow, background, spacing, animation) to every other text
+      commit();const pos=$('#pAllPos').checked,skip=new Set(['id','text','start','dur','kf','sticker','x','y','scale','rot']),n=P.texts.filter(t=>t!==s&&!t.sticker);
+      for(const t of n){for(const k of Object.keys(s))if(!skip.has(k)&&k[0]!=='_')t[k]=JSON.parse(JSON.stringify(s[k]));if(pos)['x','y','scale','rot'].forEach(k=>t[k]=s[k])}
+      refresh();toast(`تم التطبيق على ${n.length} نص`)};
     $('#pText').addEventListener('input',e=>{s.text=e.target.value;renderTimeline()});
     el.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{el._tab=b.dataset.tab;renderProps()});
     el.querySelectorAll('[data-font]').forEach(b=>b.onclick=()=>{set('font',b.dataset.font);document.fonts&&document.fonts.load(`700 40px "${s.font}"`)});
