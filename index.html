@@ -1509,7 +1509,10 @@ function startExport(){
     $('#splitMB').onchange=e=>{const v=Math.round(+e.target.value);expOpt.split=v>0?Math.min(4000,v):0;view()};
     $('#expX').onclick=hideOv;
     $('#expGo').onclick=()=>{try{localStorage.setItem('laqta-exp',JSON.stringify(expOpt))}catch(_){}
-      if(fast)startFast().catch(e=>{if(e&&e.user){exporting=null;expCleanup();hideOv();return toast('الحجم صغير مرّة على هالجودة. اختر حجم أكبر أو جودة أقل')}console.warn('fast export failed, using realtime',e);exporting=null;expCleanup();startRealtime()});else startRealtime()}};
+      if(fast)startFast().catch(e=>{if(e&&e.user){exporting=null;expCleanup();hideOv();return toast('الحجم صغير مرّة على هالجودة. اختر حجم أكبر أو جودة أقل')}
+        if(expOpt.split){exporting=null;expCleanup();const msg=String(e&&(e.message||e)||'');showOv(`<h2>ما قدرنا نقسم الفيديو</h2><p class="hint" style="direction:ltr">${esc(msg)}</p><div class="row"><button class="primary" id="noSplit">صدّر بدون تقسيم</button><button id="cpErr">نسخ الخطأ</button><button id="expX2">إلغاء</button></div>`);
+          $('#noSplit').onclick=()=>{expOpt.split=0;startFast().catch(()=>{exporting=null;expCleanup();startRealtime()})};$('#cpErr').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText('split export: '+msg+' | '+navigator.userAgent);toast('انسخ الخطأ')};$('#expX2').onclick=hideOv;return}
+        console.warn('fast export failed, using realtime',e);exporting=null;expCleanup();startRealtime()});else startRealtime()}};
   view();
 }
 async function loadMuxer(){if(window.Mp4Muxer)return;await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.js';sc.onload=res;sc.onerror=()=>rej(new Error('muxer'));document.head.appendChild(sc)})}
@@ -1552,11 +1555,11 @@ async function startFast(){ // frame-by-frame render with WebCodecs: each frame 
   let encErr=null,cur=newMux();const mux=cur.mux;
   // Splitting by size: when a part gets close to the limit the next frame is forced to be a key frame, and the part
   // closes right before it. Audio is encoded first and handed to each part for its own time range when the part closes.
-  const SPL=expOpt.split>0?expOpt.split*1048576*.94:0,parts=[],aCh=[],splitAt=new Set(),aRate=acfg.bitrate/8*1.04;let vMeta=null,aMeta=null,partT0=0,partBytes=0,frameB=vcfg.bitrate/8/fps;
+  const SPL=expOpt.split>0?expOpt.split*1048576*.94:0,parts=[],aCh=[],aRate=acfg.bitrate/8*1.04;let vMeta=null,aMeta=null,partT0=0,partBytes=0,frameB=vcfg.bitrate/8/fps,splitReq=null,lagS=2.2;
   if(SPL&&SPL<(vcfg.bitrate/8+aRate)*2){try{exporting=null}catch(_){}throw Object.assign(new Error('split-small'),{user:true})}
   const closePart=t1=>{for(const [c,m,ts] of aCh)if(ts>=partT0&&ts<t1)cur.mux.addAudioChunk(c,ts===aCh[0][2]||!aMeta?m:{...m,decoderConfig:aMeta});cur.mux.finalize();parts.push(new Blob([cur.target.buffer],{type:'video/mp4'}));cur=newMux();partT0=t1;partBytes=0};
   const onV=(c,m)=>{if(m&&m.decoderConfig)vMeta=m.decoderConfig;
-    if(SPL){if(c.type==='key'&&splitAt.has(c.timestamp)){closePart(c.timestamp);cur.mux.addVideoChunk(c,{decoderConfig:vMeta});}else cur.mux.addVideoChunk(c,m);partBytes+=c.byteLength;frameB=frameB*.9+c.byteLength*.1}
+    if(SPL){if(c.type==='key'&&splitReq!==null&&c.timestamp>=splitReq){lagS=Math.max(.1,(c.timestamp-splitReq)/1e6*1.3+.1);splitReq=null;closePart(c.timestamp);cur.mux.addVideoChunk(c,{decoderConfig:vMeta})}else cur.mux.addVideoChunk(c,m);partBytes+=c.byteLength;frameB=frameB*.9+c.byteLength*.1}
     else mux.addVideoChunk(c,m)};
   const ve=new VideoEncoder({output:onV,error:e=>encErr=e});ve.configure(vcfg);
   const ae=new AudioEncoder({output:(c,m)=>{if(m&&m.decoderConfig)aMeta=m.decoderConfig;if(SPL)aCh.push([c,m,c.timestamp]);else mux.addAudioChunk(c,m)},error:e=>encErr=e});ae.configure(acfg);
@@ -1568,7 +1571,7 @@ async function startFast(){ // frame-by-frame render with WebCodecs: each frame 
   try{
     let i=0;
     const emit=()=>{time=i/fps;draw();const ts=Math.round(i*1e6/fps);let key=i%(fps*2)===0;
-      if(SPL&&i>0&&partBytes+(ve.encodeQueueSize+3)*frameB+aRate*(ts-partT0)/1e6>SPL&&![...splitAt].some(x=>x>partT0)){splitAt.add(ts);key=true}
+      if(SPL&&i>0&&splitReq===null&&partBytes+(ve.encodeQueueSize+3)*frameB+aRate*(ts-partT0)/1e6+Math.min(SPL*.3,(frameB*fps+aRate)*lagS)>SPL){splitReq=ts;key=true}
       const vf=new VideoFrame(cv,{timestamp:ts,duration:Math.round(1e6/fps)});ve.encode(vf,{keyFrame:key});vf.close();i++;
       if(i%5===0){const p=i/N,el=(performance.now()-t0)/1000,eta=el/p-el;$('#expBar').style.width=(p*100).toFixed(1)+'%';$('#expPct').textContent=`${Math.round(p*100)}% · باقي تقريباً ${fmt(eta,false)}`}};
     const drain=async()=>{while(ve.encodeQueueSize>12)await new Promise(r=>setTimeout(r,4))};
